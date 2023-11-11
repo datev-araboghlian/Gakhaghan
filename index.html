@@ -13,9 +13,9 @@ var can_play = true;
 var words = new Array("դպրոց","դասարան","աշակերտ","ուսուցիչ","մատիտ","ռետին","տաշելիք","գրչատուփ","կցիչ","խէժ","գիրք","ջուր","տետրակ","գրատախտակ","թղթապանակ","վերամուտ","կարկին","պայուսակ","հաց","պանիր","մածուն","ճաշ","աղցան","դանակ","դգալ","պատառաքաղ","գաւաթ","պնակ","թաշկինակ","ճաշասրահ","լոլիկ","վարունք","խնձոր","խաղող","օշարակ","աշուն","տերեւ","ընտանիք","մայր","հայր","քոյր","եղբայր","մօրաքոյր","հօրաքոյր","մօրեղբայր","հօրեղբայր");
 
 
-var to_guess = " ";
-var display_word = " ";
-var used_letters = " ";
+var to_guess = "";
+var display_word = "";
+var used_letters = "";
 var wrong_guesses = 0;
 
 function selectLetter(l)
@@ -79,8 +79,8 @@ can_play = false;
 function reset()
 {
 selectWord();
-document.game.usedLetters.value = " ";
-used_letters = " ";
+document.game.usedLetters.value = "";
+used_letters = "";
 wrong_guesses = 0;
 document.hm.src="hmstart.gif";
 }
