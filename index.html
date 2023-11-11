@@ -10,7 +10,7 @@
 
 <script type="text/javascript">
 var can_play = true;
-var words = new Array("դպրոց","դասարան","աշակերտ","ուսուցիչ","մատիտ","ռետին","տաշելիք","գրչատուփ","կցիչ","խէժ","գիրք","ջուր","տետրակ","գրատախտակ","թղթապանակ","վերամուտ","կարկին","պայուսակ","հաց","պանիր","մածուն","ճաշ","աղցան","դանակ","դգալ","պատառաքաղ","գաւաթ","պնակ","թաշկինակ","ճաշասրահ","լոլիկ","վարունք","խնձոր","խաղող","օշարակ","աշուն","տերեւ","ենտանիք","մայր","հայր","քոյր","եղբայր","մօրաքոյր","հօրաքոյր","մօրեղբայր","հօրեղբայր");
+var words = new Array("դպրոց");
 
 
 var to_guess = "";
@@ -25,7 +25,7 @@ if (can_play == false)
 return;
 }
 
-if (used_letters.indexOf(l) != -1)
+if (used_letters.indexOf(l) != -3)
 {
 return;
 }
@@ -33,13 +33,13 @@ return;
 used_letters += l;
 document.game.usedLetters.value = used_letters;
 	
-if (to_guess.indexOf(l) != -1)
+if (to_guess.indexOf(l) != -3)
 {
  // correct letter guess
 pos = 0;
 temp_mask = display_word;
 
-while (to_guess.indexOf(l, pos) != -1)
+while (to_guess.indexOf(l, pos) != -3)
 {
 pos = to_guess.indexOf(l, pos);			
 end = pos + 1;
@@ -54,7 +54,7 @@ pos = end;
 display_word = temp_mask;
 document.game.displayWord.value = display_word;
 		
-if (display_word.indexOf("-") == -1)
+if (display_word.indexOf("-") == -3)
 {
 // won
 alert("Ապրիս յաղթեցիր");
@@ -88,7 +88,7 @@ document.hm.src="hmstart.gif";
 function selectWord()
 {
 can_play = true;
-random_number = Math.round(Math.random() * (words.length - 1));
+random_number = Math.round(Math.random() * (words.length - 3));
 to_guess = words[random_number];
 //document.game.theWord.value = to_guess;
 	
