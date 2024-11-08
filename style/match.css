@@ -1,0 +1,228 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #F0E2C8;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #333;
+    padding: 10px 20px;
+}
+
+.nav-left ul {
+    list-style-type: none;
+    display: flex;
+}
+
+.nav-left li {
+    margin: 0 15px;
+}
+
+.nav-left a {
+    text-decoration: none;
+    color: #f9f9f9;
+    font-weight: bold;
+}
+
+.nav-left a:hover {
+    color: #f8b400;
+}
+
+.nav-right input[type="text"] {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #f8b400;
+    outline: none;
+}
+
+.introduction {
+    display: flex;
+    justify-content: center;
+    padding-top: 0px;
+    background-color: #F0E2C8;
+    gap: 20px;
+    text-align: center;
+}
+
+.introduction h1 {
+    align-self: center;
+    font-size: 2.5em;
+    color: #333;
+    font-family: Montserrat;
+}
+
+.classement {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.classement table {
+    border: black solid 3px;
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 1000px;
+    overflow-x: auto;
+}
+
+.classement th,
+.classement td {
+    border: black solid 3px;
+    padding: 10px;
+    text-align: center;
+}
+
+.classement th {
+    background-color: #F0E2C8;
+}
+
+.classement td {
+    background-color: #085029;
+    color: white;
+}
+
+.classement a {
+    color: white;
+    text-decoration: none;
+}
+
+.classement a:hover {
+    color: #f8b400;
+}
+
+.analysis {
+    max-width: 900px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 30px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.analysis h2 {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: #2e3d49;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.analysis p {
+    font-size: 1.1em;
+    line-height: 1.7;
+    margin-bottom: 25px;
+    text-align: justify;
+    color: #555;
+    padding: 0 15px;
+}
+
+.analysis br {
+    margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .nav-left ul {
+        flex-direction: column;
+        margin-top: 10px;
+    }
+
+    .nav-left li {
+        margin-bottom: 10px;
+    }
+
+    .nav-right input[type="text"] {
+        margin-top: 10px;
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .intro {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .intro h1 {
+        font-size: 2em;
+    }
+
+    .classement table {
+        width: 100%;
+        font-size: 0.9em;
+    }
+
+    .classement th,
+    .classement td {
+        padding: 8px;
+    }
+
+    .classement a {
+        font-size: 0.9em;
+    }
+
+    .analysis {
+        padding: 20px;
+        margin: 10px;
+    }
+
+    .analysis h2 {
+        font-size: 1.8em;
+    }
+
+    .analysis p {
+        font-size: 1em;
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .intro h1 {
+        font-size: 1.8em;
+    }
+
+    .classement th,
+    .classement td {
+        padding: 5px;
+    }
+
+    .classement table {
+        font-size: 0.8em; 
+    }
+
+    .navbar {
+        padding: 10px;
+    }
+
+    .nav-left ul {
+        padding-left: 0;
+        margin-top: 10px;
+    }
+
+    .nav-left li {
+        margin-bottom: 8px;
+    }
+
+    .nav-right input[type="text"] {
+        width: 100%;
+        font-size: 0.9em;
+    }
+}
+
+footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #333;
+    color: #fff;
+}
