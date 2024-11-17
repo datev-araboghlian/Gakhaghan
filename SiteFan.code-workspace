@@ -2,12 +2,9 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../HTML Uni/Jour 3/Jour-3-HTML"
 		}
 	],
 	"settings": {
-		"liveServer.settings.multiRootWorkspaceName": "SiteFan"
+		"liveServer.settings.multiRootWorkspaceName": "Jour-3-HTML"
 	}
 }
