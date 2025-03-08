@@ -1,206 +1,116 @@
 <!DOCTYPE html>
-<html>
 <html lang="hy">
-
 <head>
-	<meta name="viewport" content="width=device-width, initial-scale=0.7" /> 
-
-	<meta charset="UTF-8">
-<title>Կախաղան</title>
-
-<script type="text/javascript">
-var can_play = true;
-var words = new Array("դպրոց","դասարան","աշակերտ","ուսուցիչ","մատիտ","ռետին","տաշելիք","գրչատուփ","կցիչ","խէժ","գիրք","ջուր","տետրակ","գրատախտակ","թղթապանակ","վերամուտ","կարկին","պայուսակ","հաց","պանիր","մածուն","ճաշ","աղցան","դանակ","դգալ","պատառաքաղ","գաւաթ","պնակ","թաշկինակ","ճաշասրահ","լոլիկ","վարունք","խնձոր","խաղող","օշարակ","աշուն","տերեւ","ենտանիք","մայր","հայր","քոյր","եղբայր","մօրաքոյր","հօրաքոյր","մօրեղբայր","հօրեղբայր");
-
-
-var to_guess = "";
-var display_word = "";
-var used_letters = "";
-var wrong_guesses = 0;
-
-function selectLetter(l)
-{
-if (can_play == false)
-{
-return;
-}
-
-if (used_letters.indexOf(l) != -1)
-{
-return;
-}
-	
-used_letters += l;
-document.game.usedLetters.value = used_letters;
-	
-if (to_guess.indexOf(l) != -1)
-{
- // correct letter guess
-pos = 0;
-temp_mask = display_word;
-
-while (to_guess.indexOf(l, pos) != -1)
-{
-pos = to_guess.indexOf(l, pos);			
-end = pos + 1;
-
-start_text = temp_mask.substring(0, pos);
-end_text = temp_mask.substring(end, temp_mask.length);
-
-temp_mask = start_text + l + end_text;
-pos = end;
-}
-
-display_word = temp_mask;
-document.game.displayWord.value = display_word;
-		
-if (display_word.indexOf("-") == -1)
-{
-// won
-alert("Ապրիս յաղթեցիր");
-can_play = false;
-}
-}
-else
-{
-// incortect letter guess
-wrong_guesses += 1;
-eval("document.hm.src=\"hm" + wrong_guesses + ".gif\"");
-		
-if (wrong_guesses == 10)
-{
-// lost
-alert("Պարտուեցար");
-can_play = false;
-}
-}
-}
-
-function reset()
-{
-selectWord();
-document.game.usedLetters.value = "";
-used_letters = "";
-wrong_guesses = 0;
-document.hm.src="hmstart.gif";
-}
-
-function selectWord()
-{
-can_play = true;
-random_number = Math.round(Math.random() * (words.length - 1));
-to_guess = words[random_number];
-//document.game.theWord.value = to_guess;
-	
-// display masked word
-masked_word = createMask(to_guess);
-document.game.displayWord.value = masked_word;
-display_word = masked_word;
-}
-
-function createMask(m)
-{
-mask = "";
-word_lenght = m.length;
-
-for (i = 0; i < word_lenght; i ++)
-{
-mask += "-";
-}
-return mask;
-}
-</script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Western Armenian Hangman - Կախաղան</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<html lang="hy">
+<body>
+    <div class="container">
+        <h1>Կախաղան</h1>
+        
+        <div class="game-container">
+            <!-- Category Selection -->
+            <div class="category-selection" id="categorySelection">
+                <h2>Ընտրէ՛ խաղի տեսակը</h2>
+                <div class="category-grid">
+                    <button class="category-btn" data-category="all">Բոլոր բառերը</button>
+                    <button class="category-btn" data-category="food">Ուտելիք</button>
+                    <button class="category-btn" data-category="nature">Բնութիւն</button>
+                    <button class="category-btn" data-category="family">Ընտանիք</button>
+                    <button class="category-btn" data-category="objects">Առարկաներ</button>
+                    <button class="category-btn" data-category="places">Վայրեր</button>
+                    <button class="category-btn" data-category="abstract">Վերացական</button>
+                    <button class="category-btn" data-category="culture">Մշակոյթ</button>
+                    <button class="category-btn" data-category="professions">Մասնագիտութիւններ</button>
+                    <button class="category-btn" data-category="colors">Գոյներ</button>
+                    <button class="category-btn" data-category="animals">Կենդանիներ</button>
+                    <button class="category-btn" data-category="body">Մարմին</button>
+                </div>
+            </div>
 
-<body onLoad="reset(); return true;">
+            <!-- Game Area (initially hidden) -->
+            <div class="game-area" id="gameArea" style="display: none;">
+                <div class="game-header">
+                    <span class="current-category">Ընտրուած տեսակը: <span id="currentCategory"></span></span>
+                    <button class="change-category-btn" id="changeCategoryBtn">Փոխել տեսակը</button>
+                </div>
 
-<center>
-<h2>Կախաղան</h2>
+                <div class="hangman-box">
+                    <canvas id="hangmanCanvas" width="200" height="250"></canvas>
+                    <div class="attempts">Մնացած փորձեր: <span id="attempts">6</span></div>
+                </div>
 
-<p>
-	<img src="hmstart.gif" height="125" width="75" name="hm">
-</p>
+                <div class="word-display" id="wordDisplay">
+                    <!-- Word will be displayed here -->
+                </div>
 
-<form name="game">
-	<p style="font-weight:bold; font-size:18px;">
-		Բառը: &nbsp;&nbsp;&nbsp;<input type="text" style="cursor:no-drop; width:200px; font-size:18px;" name="displayWord" disabled />
-		<br />
-		<br />
-		Գործածուած տառեր: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" style="cursor:no-drop; width:200px; font-size:18px;" name="usedLetters" disabled />
-	</p>
-</form>
+                <div class="message" id="message">
+                    <!-- Game messages will appear here -->
+                </div>
 
-<p style="font-weight:bold; font-size:18px;">
+                <div class="armenian-keyboard">
+                    <!-- Row 1 -->
+                    <div class="keyboard-row">
+                        <button class="key-btn">ա</button>
+                        <button class="key-btn">բ</button>
+                        <button class="key-btn">գ</button>
+                        <button class="key-btn">դ</button>
+                        <button class="key-btn">ե</button>
+                        <button class="key-btn">զ</button>
+                        <button class="key-btn">է</button>
+                        <button class="key-btn">ը</button>
+                        <button class="key-btn">թ</button>
+                    </div>
+                    <!-- Row 2 -->
+                    <div class="keyboard-row">
+                        <button class="key-btn">ժ</button>
+                        <button class="key-btn">ի</button>
+                        <button class="key-btn">լ</button>
+                        <button class="key-btn">խ</button>
+                        <button class="key-btn">ծ</button>
+                        <button class="key-btn">կ</button>
+                        <button class="key-btn">հ</button>
+                        <button class="key-btn">ձ</button>
+                        <button class="key-btn">ղ</button>
+                    </div>
+                    <!-- Row 3 -->
+                    <div class="keyboard-row">
+                        <button class="key-btn">ճ</button>
+                        <button class="key-btn">մ</button>
+                        <button class="key-btn">յ</button>
+                        <button class="key-btn">ն</button>
+                        <button class="key-btn">շ</button>
+                        <button class="key-btn">ո</button>
+                        <button class="key-btn">չ</button>
+                        <button class="key-btn">պ</button>
+                    </div>
+                    <!-- Row 4 -->
+                    <div class="keyboard-row">
+                        <button class="key-btn">ջ</button>
+                        <button class="key-btn">ռ</button>
+                        <button class="key-btn">ս</button>
+                        <button class="key-btn">վ</button>
+                        <button class="key-btn">տ</button>
+                        <button class="key-btn">ր</button>
+                        <button class="key-btn">ց</button>
+                    </div>
+                    <!-- Row 5 -->
+                    <div class="keyboard-row">
+                        <button class="key-btn">ւ</button>
+                        <button class="key-btn">փ</button>
+                        <button class="key-btn">ք</button>
+                        <button class="key-btn">և</button>
+                        <button class="key-btn">օ</button>
+                        <button class="key-btn">ֆ</button>
+                    </div>
+                </div>
 
-<label>Զատէ տառ մը:</label>
-
-<br />
-<br />
-
-<a href="javascript:selectLetter('ա');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ա"></a>
-<a href="javascript:selectLetter('բ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="բ"></a>
-<a href="javascript:selectLetter('գ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="գ"></a>
-<a href="javascript:selectLetter('դ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="դ"></a>
-<a href="javascript:selectLetter('ե');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ե"></a>
-<a href="javascript:selectLetter('զ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="զ"></a>
-<a href="javascript:selectLetter('է');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="է"></a>
-<a href="javascript:selectLetter('ը');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ը"></a>
-
-<br />
-<br />
-<a href="javascript:selectLetter('թ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="թ"></a>
-<a href="javascript:selectLetter('ժ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ժ"></a>
-<a href="javascript:selectLetter('ի');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ի"></a>
-<a href="javascript:selectLetter('լ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="լ"></a>
-<a href="javascript:selectLetter('խ';"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="խ"></a>
-<a href="javascript:selectLetter('ծ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value=ծ></a>
-<a href="javascript:selectLetter('կ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="կ"></a>
-<a href="javascript:selectLetter('հ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="հ"></a>
-
-<br />
-<br />
-<a href="javascript:selectLetter('ձ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ձ"></a>
-<a href="javascript:selectLetter('ղ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ղ"></a>
-<a href="javascript:selectLetter('ճ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ճ"></a>
-<a href="javascript:selectLetter('մ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="մ"></a>
-<a href="javascript:selectLetter('յ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="յ"></a>
-<a href="javascript:selectLetter('ն');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ն"></a>
-<a href="javascript:selectLetter('շ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="շ"></a>
-<a href="javascript:selectLetter('ո');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ո"></a>
-
-<br />
-
-
-<br />
-<a href="javascript:selectLetter('չ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="չ"></a>
-<a href="javascript:selectLetter('պ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="պ"></a>
-<a href="javascript:selectLetter('ջ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ջ"></a>
-<a href="javascript:selectLetter('ռ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ռ"></a>
-<a href="javascript:selectLetter('ս');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ս"></a>
-<a href="javascript:selectLetter('վ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="վ"></a>
-<a href="javascript:selectLetter('տ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="տ"></a>
-<a href="javascript:selectLetter('ր');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ր"></a>
-
-<br />
-
-
-<br />
-<a href="javascript:selectLetter('ց');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ց"></a>
-<a href="javascript:selectLetter('ւ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ւ"></a>
-<a href="javascript:selectLetter('փ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="փ"></a>
-<a href="javascript:selectLetter('ք');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ք"></a>
-<a href="javascript:selectLetter('օ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="օ"></a>
-<a href="javascript:selectLetter('ֆ');"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="ֆ"></a>
-
-
-
-
-<p>
-<a href="javascript:reset('Վերսկսէ')"><input type="button" style="cursor:pointer; margin-left: 10px; font-size:18px;" value="Վերսկսէ"></a>
-</p>
-</center>
-
+                <button id="restartButton" class="restart-button">Նոր Խաղ</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
