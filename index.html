@@ -3,114 +3,797 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Western Armenian Hangman - Կախաղան</title>
+    <title>Գախաղան - Արեւմտահայերէն Խաղ</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --card-bg: #fefefe;
+            --text-color: #333;
+            --secondary-color: #888;
+            --accent-color: #007bff;
+            --border-radius: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid var(--secondary-color);
+            border-radius: var(--border-radius);
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            color: var(--text-color);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: var(--accent-color);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .daily-challenge {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Կախաղան</h1>
-        
-        <div class="game-container">
-            <!-- Category Selection -->
-            <div class="category-selection" id="categorySelection">
-                <h2>Ընտրէ՛ խաղի տեսակը</h2>
-                <div class="category-grid">
-                    <button class="category-btn" data-category="all">Բոլոր բառերը</button>
-                    <button class="category-btn" data-category="food">Ուտելիք</button>
-                    <button class="category-btn" data-category="nature">Բնութիւն</button>
-                    <button class="category-btn" data-category="family">Ընտանիք</button>
-                    <button class="category-btn" data-category="objects">Առարկաներ</button>
-                    <button class="category-btn" data-category="places">Վայրեր</button>
-                    <button class="category-btn" data-category="abstract">Վերացական</button>
-                    <button class="category-btn" data-category="culture">Մշակոյթ</button>
-                    <button class="category-btn" data-category="professions">Մասնագիտութիւններ</button>
-                    <button class="category-btn" data-category="colors">Գոյներ</button>
-                    <button class="category-btn" data-category="animals">Կենդանիներ</button>
-                    <button class="category-btn" data-category="body">Մարմին</button>
-                </div>
-            </div>
+        <!-- Header buttons -->
+        <div class="header-buttons">
+            <button class="header-btn stats-btn" title="Վիճակագրութիւն">
+                <i class="fas fa-chart-bar"></i>
+            </button>
+            <button class="header-btn settings-btn" title="Կարգաւորումներ">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button class="header-btn help-btn" title="Օգնութիւն">
+                <i class="fas fa-question-circle"></i>
+            </button>
+        </div>
 
-            <!-- Game Area (initially hidden) -->
-            <div class="game-area" id="gameArea" style="display: none;">
-                <div class="game-header">
-                    <span class="current-category">Ընտրուած տեսակը: <span id="currentCategory"></span></span>
-                    <button class="change-category-btn" id="changeCategoryBtn">Փոխել տեսակը</button>
-                </div>
-
-                <div class="hangman-box">
-                    <canvas id="hangmanCanvas" width="200" height="250"></canvas>
-                    <div class="attempts">Մնացած փորձեր: <span id="attempts">6</span></div>
-                </div>
-
-                <div class="word-display" id="wordDisplay">
-                    <!-- Word will be displayed here -->
-                </div>
-
-                <div class="message" id="message">
-                    <!-- Game messages will appear here -->
-                </div>
-
-                <div class="armenian-keyboard">
-                    <!-- Row 1 -->
-                    <div class="keyboard-row">
-                        <button class="key-btn">ա</button>
-                        <button class="key-btn">բ</button>
-                        <button class="key-btn">գ</button>
-                        <button class="key-btn">դ</button>
-                        <button class="key-btn">ե</button>
-                        <button class="key-btn">զ</button>
-                        <button class="key-btn">է</button>
-                        <button class="key-btn">ը</button>
-                        <button class="key-btn">թ</button>
-                    </div>
-                    <!-- Row 2 -->
-                    <div class="keyboard-row">
-                        <button class="key-btn">ժ</button>
-                        <button class="key-btn">ի</button>
-                        <button class="key-btn">լ</button>
-                        <button class="key-btn">խ</button>
-                        <button class="key-btn">ծ</button>
-                        <button class="key-btn">կ</button>
-                        <button class="key-btn">հ</button>
-                        <button class="key-btn">ձ</button>
-                        <button class="key-btn">ղ</button>
-                    </div>
-                    <!-- Row 3 -->
-                    <div class="keyboard-row">
-                        <button class="key-btn">ճ</button>
-                        <button class="key-btn">մ</button>
-                        <button class="key-btn">յ</button>
-                        <button class="key-btn">ն</button>
-                        <button class="key-btn">շ</button>
-                        <button class="key-btn">ո</button>
-                        <button class="key-btn">չ</button>
-                        <button class="key-btn">պ</button>
-                    </div>
-                    <!-- Row 4 -->
-                    <div class="keyboard-row">
-                        <button class="key-btn">ջ</button>
-                        <button class="key-btn">ռ</button>
-                        <button class="key-btn">ս</button>
-                        <button class="key-btn">վ</button>
-                        <button class="key-btn">տ</button>
-                        <button class="key-btn">ր</button>
-                        <button class="key-btn">ց</button>
-                    </div>
-                    <!-- Row 5 -->
-                    <div class="keyboard-row">
-                        <button class="key-btn">ւ</button>
-                        <button class="key-btn">փ</button>
-                        <button class="key-btn">ք</button>
-                        <button class="key-btn">և</button>
-                        <button class="key-btn">օ</button>
-                        <button class="key-btn">ֆ</button>
-                    </div>
-                </div>
-
-                <button id="restartButton" class="restart-button">Նոր Խաղ</button>
+        <!-- Home screen with game modes -->
+        <div id="home-screen">
+            <h1>Գախաղան</h1>
+            <div class="game-modes">
+                <button class="mode-btn" data-mode="regular">
+                    <i class="fas fa-gamepad"></i> Սովորական
+                </button>
+                <button class="mode-btn" data-mode="daily">
+                    <i class="fas fa-calendar-day"></i> Օրուայ մարտահրաւէր
+                </button>
             </div>
         </div>
-    </div>
-    <script src="script.js"></script>
-</body>
+
+        <!-- Category selection -->
+        <div id="category-selection" style="display: none;">
+            <h2>Ընտրեցէք կատեգորիան</h2>
+            <div class="categories">
+                <button class="category-btn" data-category="food">
+                    <i class="fas fa-utensils"></i> Կերակուր եւ Ըմպելիք
+                </button>
+                <button class="category-btn" data-category="animals">
+                    <i class="fas fa-paw"></i> Կենդանիներ
+                </button>
+                <button class="category-btn" data-category="colors">
+                    <i class="fas fa-palette"></i> Գոյներ
+                </button>
+                <button class="category-btn" data-category="household">
+                    <i class="fas fa-home"></i> Տնային իրեր
+                </button>
+                <button class="category-btn" data-category="all">
+                    <i class="fas fa-random"></i> Բոլորը
+                </button>
+            </div>
+        </div>
+
+        <div id="game-area" style="display: none;">
+            <button class="back-btn" id="back-from-game">
+                <i class="fas fa-arrow-left"></i> Ետ
+            </button>
+            <div class="timer-container">
+                <i class="fas fa-clock"></i> <span class="timer" id="timer">00:00</span>
+            </div>
+            
+            <div class="word-info">
+                <button class="restart-btn" id="restart-game">
+                    <i class="fas fa-redo"></i> Նոր խաղ
+                </button>
+                
+                <div class="word-display"></div>
+                <div class="message"></div>
+            </div>
+
+            <div class="hangman-drawing">
+                <svg width="200" height="250" class="hangman-svg"></svg>
+            </div>
+
+            <div class="armenian-keyboard">
+                <!-- First row -->
+                <div class="keyboard-row">
+                    <button class="key-btn" data-letter="ա">ա</button>
+                    <button class="key-btn" data-letter="բ">բ</button>
+                    <button class="key-btn" data-letter="գ">գ</button>
+                    <button class="key-btn" data-letter="դ">դ</button>
+                    <button class="key-btn" data-letter="ե">ե</button>
+                    <button class="key-btn" data-letter="զ">զ</button>
+                    <button class="key-btn" data-letter="է">է</button>
+                    <button class="key-btn" data-letter="ը">ը</button>
+                    <button class="key-btn" data-letter="թ">թ</button>
+                </div>
+                <!-- Second row -->
+                <div class="keyboard-row">
+                    <button class="key-btn" data-letter="ժ">ժ</button>
+                    <button class="key-btn" data-letter="ի">ի</button>
+                    <button class="key-btn" data-letter="լ">լ</button>
+                    <button class="key-btn" data-letter="խ">խ</button>
+                    <button class="key-btn" data-letter="ծ">ծ</button>
+                    <button class="key-btn" data-letter="կ">կ</button>
+                    <button class="key-btn" data-letter="հ">հ</button>
+                    <button class="key-btn" data-letter="ձ">ձ</button>
+                    <button class="key-btn" data-letter="ղ">ղ</button>
+                </div>
+                <!-- Third row -->
+                <div class="keyboard-row">
+                    <button class="key-btn" data-letter="ճ">ճ</button>
+                    <button class="key-btn" data-letter="մ">մ</button>
+                    <button class="key-btn" data-letter="յ">յ</button>
+                    <button class="key-btn" data-letter="ն">ն</button>
+                    <button class="key-btn" data-letter="շ">շ</button>
+                    <button class="key-btn" data-letter="ո">ո</button>
+                    <button class="key-btn" data-letter="չ">չ</button>
+                    <button class="key-btn" data-letter="պ">պ</button>
+                    <button class="key-btn" data-letter="ջ">ջ</button>
+                </div>
+                <!-- Fourth row -->
+                <div class="keyboard-row">
+                    <button class="key-btn" data-letter="ռ">ռ</button>
+                    <button class="key-btn" data-letter="ս">ս</button>
+                    <button class="key-btn" data-letter="վ">վ</button>
+                    <button class="key-btn" data-letter="տ">տ</button>
+                    <button class="key-btn" data-letter="ր">ր</button>
+                    <button class="key-btn" data-letter="ց">ց</button>
+                    <button class="key-btn" data-letter="ւ">ւ</button>
+                    <button class="key-btn" data-letter="փ">փ</button>
+                    <button class="key-btn" data-letter="ք">ք</button>
+                </div>
+                <!-- Fifth row -->
+                <div class="keyboard-row">
+                    <button class="key-btn" data-letter="և">և</button>
+                    <button class="key-btn" data-letter="օ">օ</button>
+                    <button class="key-btn" data-letter="ֆ">ֆ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Կարգաւորումներ</h2>
+                <div class="settings-option">
+                    <label for="darkMode">Մութ ձեւաւորում</label>
+                    <input type="checkbox" id="darkMode">
+                </div>
+                <div class="settings-option">
+                    <label for="soundEffects">Ձայնային էֆեկտներ</label>
+                    <input type="checkbox" id="soundEffects">
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Modal -->
+        <div id="statsModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Վիճակագրութիւն</h2>
+                <div class="stats-item">
+                    <span class="stats-label">Խաղեր</span>
+                    <span class="stats-value" id="gamesPlayed">0</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">Յաղթանակներ</span>
+                    <span class="stats-value" id="gamesWon">0</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">Յաղթանակի տոկոս</span>
+                    <span class="stats-value" id="winPercentage">0%</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">Ընթացիկ շարք</span>
+                    <span class="stats-value" id="currentStreak">0</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">Լաւագոյն շարք</span>
+                    <span class="stats-value" id="maxStreak">0</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">Միջին ժամանակ</span>
+                    <span class="stats-value" id="averageTime">0s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="helpModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Օգնութիւն</h2>
+                <p>Գախաղան խաղը Արեւմտահայերէն բառերու գուշակութեան խաղ մըն է:</p>
+                <p><strong>Ինչպէ՞ս խաղալ.</strong></p>
+                <ul>
+                    <li>Ընտրեցէք խաղի ձեւը՝ Սովորական կամ Օրուայ մարտահրաւէր</li>
+                    <li>Սեղմեցէք տառերը՝ բառը գուշակելու համար</li>
+                    <li>Ամէն սխալ գուշակութեան համար, գախաղանը մէկ մասով կը լրացուի</li>
+                    <li>Ճիշդ գուշակեցէք բառը նախքան գախաղանը ամբողջանալը</li>
+                </ul>
+                <p><strong>Խաղի ձեւեր.</strong></p>
+                <ul>
+                    <li><strong>Սովորական</strong> - Պատահական բառ բոլոր կատեգորիաներէն</li>
+                    <li><strong>Օրուայ մարտահրաւէր</strong> - Ամէն օր նոր բառ մը</li>
+                </ul>
+            </div>
+        </div>
+
+        <script>
+            // Sound manager
+            class SoundManager {
+                constructor() {
+                    this.enabled = true;
+                    this.context = null;
+                }
+
+                initAudioContext() {
+                    if (!this.context) {
+                        this.context = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    return this.context;
+                }
+
+                beep(freq, duration) {
+                    if (!this.enabled) return;
+                    
+                    const context = this.initAudioContext();
+                    const oscillator = context.createOscillator();
+                    const gain = context.createGain();
+                    
+                    oscillator.connect(gain);
+                    gain.connect(context.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    
+                    gain.gain.setValueAtTime(0, context.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.5, context.currentTime + 0.01);
+                    gain.gain.linearRampToValueAtTime(0, context.currentTime + duration);
+                    
+                    oscillator.start(context.currentTime);
+                    oscillator.stop(context.currentTime + duration);
+                }
+
+                play(soundType) {
+                    if (!this.enabled) return;
+                    
+                    switch (soundType) {
+                        case 'correct':
+                            this.beep(880, 0.15); // High beep
+                            break;
+                        case 'wrong':
+                            this.beep(220, 0.3); // Low beep
+                            break;
+                        case 'win':
+                            this.beep(440, 0.1);
+                            setTimeout(() => this.beep(554.37, 0.1), 100);
+                            setTimeout(() => this.beep(659.25, 0.3), 200);
+                            break;
+                        case 'lose':
+                            this.beep(440, 0.2);
+                            setTimeout(() => this.beep(415.30, 0.2), 200);
+                            setTimeout(() => this.beep(392.00, 0.4), 400);
+                            break;
+                    }
+                }
+
+                setEnabled(enabled) {
+                    this.enabled = enabled;
+                }
+            }
+
+            // Utility function to handle modals
+            function setupModal(modalId, buttonId, closeId) {
+                const modal = document.getElementById(modalId);
+                const btn = document.querySelector(buttonId);
+                const span = document.getElementById(closeId);
+
+                if (btn) {
+                    btn.onclick = function() {
+                        modal.style.display = "block";
+                    }
+                }
+
+                if (span) {
+                    span.onclick = function() {
+                        modal.style.display = "none";
+                    }
+                }
+
+                window.onclick = function(event) {
+                    if (event.target == modal) {
+                        modal.style.display = "none";
+                    }
+                }
+            }
+
+            // Initialize modals
+            setupModal('settingsModal', '.settings-btn', 'closeSettings');
+            setupModal('statsModal', '.stats-btn', 'closeStats');
+            setupModal('helpModal', '.help-btn', 'closeHelp');
+
+            // Statistics management
+            class Statistics {
+                constructor() {
+                    this.stats = {
+                        gamesPlayed: 0,
+                        gamesWon: 0,
+                        currentStreak: 0,
+                        maxStreak: 0,
+                        totalTime: 0
+                    };
+                }
+
+                updateStats(won, timeSpent) {
+                    this.stats.gamesPlayed++;
+                    this.stats.totalTime += timeSpent;
+                    if (won) {
+                        this.stats.gamesWon++;
+                        this.stats.currentStreak++;
+                        if (this.stats.currentStreak > this.stats.maxStreak) {
+                            this.stats.maxStreak = this.stats.currentStreak;
+                        }
+                    } else {
+                        this.stats.currentStreak = 0;
+                    }
+                    this.updateDisplay();
+                }
+
+                updateDisplay() {
+                    document.getElementById('gamesPlayed').textContent = this.stats.gamesPlayed;
+                    document.getElementById('gamesWon').textContent = this.stats.gamesWon;
+                    document.getElementById('currentStreak').textContent = this.stats.currentStreak;
+                    document.getElementById('maxStreak').textContent = this.stats.maxStreak;
+                    document.getElementById('averageTime').textContent = (this.stats.totalTime / this.stats.gamesPlayed).toFixed(2);
+                }
+            }
+
+            // Hangman drawing manager
+            class HangmanDrawing {
+                constructor(svgElement) {
+                    this.svg = svgElement;
+                    this.parts = [
+                        this.drawGallows.bind(this),    // Base structure
+                        this.drawHead.bind(this),       // Head
+                        this.drawBody.bind(this),       // Body
+                        this.drawLeftArm.bind(this),    // Left arm
+                        this.drawRightArm.bind(this),   // Right arm
+                        this.drawLeftLeg.bind(this),    // Left leg
+                        this.drawRightLeg.bind(this)    // Right leg
+                    ];
+                }
+
+                clear() {
+                    while (this.svg.firstChild) {
+                        this.svg.removeChild(this.svg.firstChild);
+                    }
+                }
+
+                drawPart(attempt) {
+                    if (attempt >= 0 && attempt < this.parts.length) {
+                        this.parts[attempt]();
+                    }
+                }
+
+                createSVGElement(type, attributes) {
+                    const element = document.createElementNS("http://www.w3.org/2000/svg", type);
+                    for (const [key, value] of Object.entries(attributes)) {
+                        element.setAttribute(key, value);
+                    }
+                    this.svg.appendChild(element);
+                    return element;
+                }
+
+                drawGallows() {
+                    // Base
+                    this.createSVGElement("line", {
+                        x1: "40", y1: "230",
+                        x2: "160", y2: "230",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                    
+                    // Vertical pole
+                    this.createSVGElement("line", {
+                        x1: "100", y1: "230",
+                        x2: "100", y2: "30",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                    
+                    // Horizontal beam
+                    this.createSVGElement("line", {
+                        x1: "100", y1: "30",
+                        x2: "150", y2: "30",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                    
+                    // Rope
+                    this.createSVGElement("line", {
+                        x1: "150", y1: "30",
+                        x2: "150", y2: "50",
+                        stroke: "#444",
+                        "stroke-width": "2"
+                    });
+                }
+
+                drawHead() {
+                    this.createSVGElement("circle", {
+                        cx: "150",
+                        cy: "70",
+                        r: "20",
+                        stroke: "#444",
+                        "stroke-width": "4",
+                        fill: "none"
+                    });
+                }
+
+                drawBody() {
+                    this.createSVGElement("line", {
+                        x1: "150", y1: "90",
+                        x2: "150", y2: "150",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                }
+
+                drawLeftArm() {
+                    this.createSVGElement("line", {
+                        x1: "150", y1: "110",
+                        x2: "120", y2: "130",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                }
+
+                drawRightArm() {
+                    this.createSVGElement("line", {
+                        x1: "150", y1: "110",
+                        x2: "180", y2: "130",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                }
+
+                drawLeftLeg() {
+                    this.createSVGElement("line", {
+                        x1: "150", y1: "150",
+                        x2: "120", y2: "180",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                }
+
+                drawRightLeg() {
+                    this.createSVGElement("line", {
+                        x1: "150", y1: "150",
+                        x2: "180", y2: "180",
+                        stroke: "#444",
+                        "stroke-width": "4"
+                    });
+                }
+            }
+
+            // Word data
+            const wordData = {
+                'Կերակուր եւ Ըմպելիք': [
+                    'լաւաշ', 'դոլմա', 'խորոված', 'թան', 'գաթայ',
+                    'պանիր', 'մածուն', 'բաստուրմա', 'սուճուխ', 'քյուֆթա'
+                ],
+                'Ընտանիք': [
+                    'մայր', 'հայր', 'քոյր', 'եղբայր', 'տատ',
+                    'պապ', 'հարս', 'փեսայ', 'զաւակ', 'թոռ'
+                ],
+                'Բնութիւն': [
+                    'ծառ', 'ծաղիկ', 'լեռ', 'գետ', 'ծով',
+                    'արեւ', 'լուսին', 'աստղ', 'անտառ', 'երկինք'
+                ],
+                'Կենդանիներ': [
+                    'շուն', 'կատու', 'ձի', 'առիւծ', 'արջ',
+                    'գայլ', 'աղուէս', 'նապաստակ', 'ոչխար', 'այծ'
+                ]
+            };
+
+            // Game class
+            class Game {
+                constructor() {
+                    this.currentWord = '';
+                    this.currentCategory = '';
+                    this.guessedLetters = new Set();
+                    this.remainingAttempts = 6;
+                    this.gameMode = 'regular';
+                    this.sounds = new SoundManager();
+                    this.statistics = new Statistics();
+                    this.startTime = 0;
+                    
+                    this.initializeUI();
+                    this.setupEventListeners();
+                }
+
+                initializeUI() {
+                    this.wordDisplay = document.querySelector('.word-display');
+                    this.keyboard = document.querySelector('.armenian-keyboard');
+                    this.timerDisplay = document.querySelector('.timer');
+                    this.messageDisplay = document.querySelector('.message');
+                    this.categorySelection = document.querySelector('#category-selection');
+                    this.gameArea = document.querySelector('#game-area');
+                    
+                    const svgElement = document.querySelector('.hangman-svg');
+                    if (svgElement) {
+                        this.hangman = new HangmanDrawing(svgElement);
+                    }
+                    
+                    if (this.gameArea) this.gameArea.style.display = 'none';
+                    
+                    if (this.categorySelection) this.categorySelection.style.display = 'none';
+                }
+
+                setupEventListeners() {
+                    // Mode buttons
+                    document.querySelectorAll('.mode-btn').forEach(btn => {
+                        btn.onclick = () => {
+                            const mode = btn.getAttribute('data-mode');
+                            console.log('Mode clicked:', mode);
+                            this.setGameMode(mode);
+                        };
+                    });
+
+                    // Category buttons
+                    document.querySelectorAll('.category-btn').forEach(btn => {
+                        btn.onclick = () => {
+                            const category = btn.getAttribute('data-category');
+                            console.log('Category clicked:', category);
+                            this.selectCategory(category);
+                        };
+                    });
+
+                    // Keyboard buttons
+                    document.querySelectorAll('.key-btn').forEach(btn => {
+                        btn.onclick = () => {
+                            if (!btn.disabled) {
+                                const letter = btn.getAttribute('data-letter');
+                                console.log('Letter clicked:', letter);
+                                this.makeGuess(letter);
+                            }
+                        };
+                    });
+
+                    // Settings button
+                    document.querySelector('.settings-btn').onclick = () => {
+                        const modal = document.getElementById('settingsModal');
+                        if (modal) modal.style.display = 'block';
+                    };
+
+                    // Stats button
+                    document.querySelector('.stats-btn').onclick = () => {
+                        this.statistics.updateDisplay();
+                        const modal = document.getElementById('statsModal');
+                        if (modal) modal.style.display = 'block';
+                    };
+
+                    // Help button
+                    document.querySelector('.help-btn').onclick = () => {
+                        const modal = document.getElementById('helpModal');
+                        if (modal) modal.style.display = 'block';
+                    };
+
+                    // Close buttons for modals
+                    document.querySelectorAll('.close').forEach(closeBtn => {
+                        closeBtn.onclick = function() {
+                            const modal = this.closest('.modal');
+                            if (modal) modal.style.display = 'none';
+                        };
+                    });
+
+                    // Close modal when clicking outside
+                    window.onclick = (event) => {
+                        if (event.target.classList.contains('modal')) {
+                            event.target.style.display = 'none';
+                        }
+                    };
+
+                    // Back buttons
+                    document.querySelectorAll('.back-btn').forEach(backBtn => {
+                        backBtn.onclick = () => {
+                            if (backBtn.id === 'back-from-game') {
+                                document.getElementById('home-screen').style.display = 'block';
+                                document.getElementById('game-area').style.display = 'none';
+                            }
+                        };
+                    });
+
+                    // Restart button
+                    document.getElementById('restart-game').onclick = () => {
+                        this.startNewGame();
+                    };
+                }
+
+                setGameMode(mode) {
+                    this.gameMode = mode;
+                    this.currentWord = '';
+                    this.guessedLetters.clear();
+                    this.remainingAttempts = 6;
+                    
+                    if (this.categorySelection) this.categorySelection.style.display = 'none';
+                    if (this.gameArea) this.gameArea.style.display = 'none';
+                    
+                    if (mode === 'regular') {
+                        if (this.categorySelection) this.categorySelection.style.display = 'block';
+                    } else if (mode === 'daily') {
+                        const allWords = Object.values(wordData).flat();
+                        const today = new Date();
+                        const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+                        this.currentWord = allWords[dayOfYear % allWords.length];
+                        
+                        if (this.gameArea) this.gameArea.style.display = 'block';
+                        this.startNewGame();
+                    } else if (mode === 'category') {
+                        if (this.categorySelection) this.categorySelection.style.display = 'block';
+                    }
+                }
+
+                selectCategory(category) {
+                    this.currentCategory = category;
+                    
+                    if (this.categorySelection) this.categorySelection.style.display = 'none';
+                    if (this.gameArea) this.gameArea.style.display = 'block';
+                    
+                    this.startNewGame();
+                }
+
+                startNewGame() {
+                    this.guessedLetters.clear();
+                    this.remainingAttempts = 6;
+                    this.startTime = Date.now();
+                    
+                    if (this.gameMode === 'regular') {
+                        const words = wordData[this.currentCategory];
+                        if (!words || words.length === 0) {
+                            console.error('No words found for category:', this.currentCategory);
+                            return;
+                        }
+                        this.currentWord = words[Math.floor(Math.random() * words.length)];
+                    }
+                    
+                    document.querySelectorAll('.key-btn').forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('correct', 'wrong');
+                    });
+                    
+                    if (this.messageDisplay) {
+                        this.messageDisplay.textContent = '';
+                    }
+                    
+                    if (this.hangman) {
+                        this.hangman.clear();
+                        this.hangman.drawPart(0); // Draw the gallows
+                    }
+                    
+                    this.updateDisplay();
+                }
+
+                makeGuess(letter) {
+                    if (!this.currentWord || this.guessedLetters.has(letter)) return;
+                    
+                    this.guessedLetters.add(letter);
+                    
+                    if (!this.currentWord.includes(letter)) {
+                        this.remainingAttempts--;
+                        this.sounds.play('wrong');
+                        if (this.hangman) {
+                            this.hangman.drawPart(6 - this.remainingAttempts);
+                        }
+                    } else {
+                        this.sounds.play('correct');
+                    }
+                    
+                    this.updateDisplay();
+                    
+                    if (this.checkWin()) {
+                        this.endGame(true);
+                    } else if (this.remainingAttempts <= 0) {
+                        this.endGame(false);
+                    }
+                }
+
+                checkWin() {
+                    return [...this.currentWord].every(letter => this.guessedLetters.has(letter));
+                }
+
+                updateDisplay() {
+                    if (this.wordDisplay) {
+                        this.wordDisplay.innerHTML = [...this.currentWord]
+                            .map(letter => `<span>${this.guessedLetters.has(letter) ? letter : '_'}</span>`)
+                            .join('');
+                    }
+                    
+                    document.querySelectorAll('.key-btn').forEach(key => {
+                        const letter = key.getAttribute('data-letter');
+                        if (this.guessedLetters.has(letter)) {
+                            key.disabled = true;
+                            key.classList.add(this.currentWord.includes(letter) ? 'correct' : 'wrong');
+                        }
+                    });
+                }
+
+                endGame(won) {
+                    const message = won ? 'Շնորհաւո՜ր, յաղթեցիք' : `Ցաւօք, պարտուեցաք։ Բառը՝ ${this.currentWord}`;
+                    if (this.messageDisplay) {
+                        this.messageDisplay.textContent = message;
+                    }
+                    
+                    this.sounds.play(won ? 'win' : 'lose');
+                    
+                    document.querySelectorAll('.key-btn').forEach(btn => {
+                        btn.disabled = true;
+                    });
+                    
+                    const timeSpent = Math.floor((Date.now() - this.startTime) / 1000);
+                    this.statistics.updateStats(won, timeSpent);
+
+                    // Show end game modal
+                    setTimeout(() => {
+                        alert(`${message}\nTime Spent: ${timeSpent} seconds`);
+                    }, 500);
+                }
+            }
+
+            // Initialize the game when the DOM is fully loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                // Apply initial theme before creating game instance
+                const savedSettings = localStorage.getItem('hangman_settings');
+                const settings = savedSettings ? JSON.parse(savedSettings) : { darkMode: true };
+                document.documentElement.setAttribute('data-theme', settings.darkMode ? 'dark' : 'light');
+                
+                // Initialize game
+                const game = new Game();
+                window.game = game; // Make it accessible globally for debugging
+            });
+        </script>
+    </body>
 </html>
