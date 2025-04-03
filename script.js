@@ -1,4 +1,5 @@
-import { wordData, getDailyWord, hasDailyChallengeBeenPlayed, markDailyChallengeAsPlayed, getRandomWord } from './data.js';
+// Import functions from data.js
+import { wordData, getAllWords, getDailyWord, hasDailyChallengeBeenPlayed, markDailyChallengeAsPlayed, getRandomWord } from './data.js';
 
 // Ensure we have window.AudioContext or webkitAudioContext
 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -9,110 +10,167 @@ const AudioContext = window.AudioContext || window.webkitAudioContext;
  */
 class SoundManager {
     constructor() {
+        console.log('Initializing SoundManager');
+        
         // Default properties
         this.enabled = localStorage.getItem('soundEffects') !== 'false';
         this.audioContext = null;
         this.sounds = {};
         
+        // Try to create audio context
+        this.initAudioContext();
+        
+        // Initialize with a single click handler that creates the context
+        // This is needed for browsers that require user interaction
+        document.addEventListener('click', () => {
+            if (!this.audioContext) {
+                this.initAudioContext();
+            } else if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+        }, { once: true });
+        
+        console.log('SoundManager initialization complete, enabled:', this.enabled);
+    }
+    
+    // Initialize AudioContext
+    initAudioContext() {
         try {
-            if (AudioContext) {
-                this.audioContext = new AudioContext();
-                console.log('Audio context created successfully');
-            } else {
-                console.warn('Audio API not supported in this browser');
+            if (!this.audioContext) {
+                // Use the standard or webkit audio context
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    this.audioContext = new AudioContextClass();
+                    console.log('Audio context created successfully, state:', this.audioContext.state);
+                    
+                    // Resume context if suspended
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume().then(() => {
+                            console.log('Audio context resumed on initialization');
+                        });
+                    }
+                    
+                    // Generate sounds
+                    this.loadSounds();
+                } else {
+                    console.error('AudioContext not supported in this browser');
+                }
             }
         } catch (e) {
-            console.error('Error creating audio context:', e);
+            console.error('Failed to initialize audio context:', e);
         }
     }
     
-    // Generate a simple tone
-    generateTone(frequency, duration, options = {}) {
+    // Generate a simple beep sound - simplified version
+    generateBeep(frequency, duration, volume = 0.5) {
         return {
             play: () => {
-                if (!this.enabled || !this.audioContext) return;
+                if (!this.enabled || !this.audioContext) {
+                    console.log('Cannot play beep - sound disabled or no audio context');
+                    return;
+                }
                 
                 try {
-                    const ctx = this.audioContext;
-                    const now = ctx.currentTime;
+                    // Make sure context is running
+                    if (this.audioContext.state !== 'running') {
+                        this.audioContext.resume();
+                    }
                     
-                    const oscillator = ctx.createOscillator();
-                    const gainNode = ctx.createGain();
-                    
-                    oscillator.type = options.type || 'sine';
-                    oscillator.frequency.value = frequency;
-                    
-                    gainNode.gain.value = options.volume || 0.3;
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
                     
                     oscillator.connect(gainNode);
-                    gainNode.connect(ctx.destination);
+                    gainNode.connect(this.audioContext.destination);
                     
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = frequency;
+                    gainNode.gain.value = volume; // Higher volume
+                    
+                    const now = this.audioContext.currentTime;
                     oscillator.start(now);
                     oscillator.stop(now + duration);
+                    
+                    console.log(`Beep played: freq=${frequency}, duration=${duration}s`);
                 } catch (e) {
-                    console.error('Error playing tone:', e);
+                    console.error('Error playing beep:', e);
                 }
             }
         };
     }
     
-    // Get or create a sound
+    // Load sound effects - simplified versions with higher volume
+    loadSounds() {
+        console.log('Loading sound effects');
+        try {
+            this.sounds = {
+                // Game sounds
+                key: this.generateBeep(440, 0.1, 0.7),               // A note
+                correct: this.generateBeep(523.25, 0.15, 0.7),       // C note
+                wrong: this.generateBeep(277.18, 0.2, 0.7),          // C# note (lower)
+                win: this.generateBeep(659.25, 0.3, 0.7),            // E note
+                lose: this.generateBeep(196, 0.5, 0.7),              // G note (lower)
+                
+                // UI sounds
+                click: this.generateBeep(600, 0.05, 0.7),            // D# note
+                select: this.generateBeep(700, 0.08, 0.7),           // F note
+                start: this.generateBeep(800, 0.1, 0.7),             // G note
+                back: this.generateBeep(350, 0.08, 0.7)              // F note (lower)
+            };
+            console.log('Sound effects loaded successfully');
+        } catch (e) {
+            console.error('Error loading sounds:', e);
+        }
+    }
+    
+    // Get a sound by name
     getSound(soundName) {
         if (!this.sounds[soundName]) {
-            // Generate the sound on first request
-            switch (soundName) {
-                case 'key':
-                    this.sounds[soundName] = this.generateTone(160, 0.08, { type: 'triangle', volume: 0.2 });
-                    break;
-                case 'correct':
-                    this.sounds[soundName] = this.generateTone(400, 0.2, { type: 'sine', volume: 0.3 });
-                    break;
-                case 'wrong':
-                    this.sounds[soundName] = this.generateTone(200, 0.3, { type: 'sawtooth', volume: 0.2 });
-                    break;
-                case 'win':
-                    this.sounds[soundName] = this.generateTone(600, 0.5, { type: 'sine', volume: 0.3 });
-                    break;
-                case 'lose':
-                    this.sounds[soundName] = this.generateTone(150, 0.5, { type: 'sine', volume: 0.3 });
-                    break;
-                case 'click':
-                    this.sounds[soundName] = this.generateTone(300, 0.1, { type: 'triangle', volume: 0.15 });
-                    break;
-                case 'select':
-                    this.sounds[soundName] = this.generateTone(350, 0.15, { type: 'sine', volume: 0.2 });
-                    break;
-                case 'start':
-                    this.sounds[soundName] = this.generateTone(440, 0.3, { type: 'sine', volume: 0.25 });
-                    break;
-                case 'back':
-                    this.sounds[soundName] = this.generateTone(250, 0.15, { type: 'triangle', volume: 0.2 });
-                    break;
-                default:
-                    this.sounds[soundName] = this.generateTone(300, 0.2, { type: 'sine', volume: 0.2 });
-            }
+            console.warn(`Sound not found: ${soundName}`);
+            return null;
         }
         return this.sounds[soundName];
     }
     
-    // Play a sound
+    // Play a sound with error handling
     play(soundName) {
-        if (!this.enabled) return;
+        if (!this.enabled) {
+            console.log('Sound effects disabled');
+            return;
+        }
+        
+        // Create context if it doesn't exist
+        if (!this.audioContext) {
+            try {
+                this.initAudioContext();
+            } catch (e) {
+                console.error('Failed to create audio context:', e);
+                return;
+            }
+        }
         
         try {
-            // Try to resume context if suspended
-            if (this.audioContext && this.audioContext.state === 'suspended') {
-                this.audioContext.resume();
+            // Get the sound
+            const sound = this.getSound(soundName);
+            if (!sound) {
+                console.warn(`Cannot play sound "${soundName}": not found`);
+                return;
             }
             
-            // Get and play the sound
-            const sound = this.getSound(soundName);
-            if (sound) {
+            // Resume context if suspended
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    console.log('Audio context resumed');
+                    // Play the sound after context is resumed
+                    sound.play();
+                }).catch(e => {
+                    console.error('Failed to resume audio context:', e);
+                });
+            } else {
+                // Play the sound directly
                 sound.play();
-                console.log(`Playing sound: ${soundName}`);
             }
         } catch (e) {
-            console.error(`Error playing sound ${soundName}:`, e);
+            console.error(`Error playing sound "${soundName}":`, e);
         }
     }
     
@@ -120,6 +178,7 @@ class SoundManager {
     setEnabled(enabled) {
         this.enabled = enabled;
         localStorage.setItem('soundEffects', enabled);
+        console.log(`Sound effects ${enabled ? 'enabled' : 'disabled'}`);
     }
 }
 
@@ -412,24 +471,92 @@ class Game {
         this.initialize();
     }
     
-    // Initialize the game components
+    /**
+     * Initialize the game components
+     */
     initialize() {
-        console.log('Initializing game components');
+        console.log('Initializing game components...');
         
-        // Setup button listeners
-        this.setupButtonListeners();
+        try {
+            // Set up button listeners
+            this.setupButtonListeners();
+            
+            // Set up settings event listeners
+            this.setupSettingsListeners();
+            
+            // Apply dark mode from settings
+            const darkMode = this.settings.getSetting('darkMode') !== false;
+            document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+            
+            // Initialize sound system
+            if (this.sounds) {
+                if (!this.sounds.audioContext) {
+                    this.sounds.initAudioContext();
+                }
+            }
+            
+            // Show home screen
+            this.showScreen('home-screen');
+            
+            console.log('Game initialization complete!');
+        } catch (error) {
+            console.error('Error during game initialization:', error);
+            alert('Սխալ տեղի ունեցաւ խաղը բացելու ընթացքին:');
+        }
+    }
+    
+    /**
+     * Set up settings listeners for sound effects and dark mode checkboxes
+     */
+    setupSettingsListeners() {
+        console.log('Setting up settings listeners');
         
-        // Setup sound test buttons
-        this.setupSoundTestButtons();
+        // Set up sound checkbox
+        const soundCheckbox = document.getElementById('soundEffects');
+        if (soundCheckbox) {
+            // Set initial state
+            soundCheckbox.checked = this.settings.getSetting('soundEffects') !== false;
+            
+            soundCheckbox.addEventListener('change', () => {
+                // Update settings
+                this.settings.updateSetting('soundEffects', soundCheckbox.checked);
+                
+                // Update sound manager
+                if (this.sounds) {
+                    this.sounds.setEnabled(soundCheckbox.checked);
+                }
+                
+                console.log(`Sound effects ${soundCheckbox.checked ? 'enabled' : 'disabled'}`);
+            });
+        } else {
+            console.warn('Sound checkbox not found');
+        }
         
-        // Apply dark mode from settings
-        const darkMode = this.settings.getSetting('darkMode');
-        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+        // Set up dark mode checkbox
+        const darkModeCheckbox = document.getElementById('darkMode');
+        if (darkModeCheckbox) {
+            // Set initial state
+            darkModeCheckbox.checked = this.settings.getSetting('darkMode') !== false;
+            
+            darkModeCheckbox.addEventListener('change', () => {
+                // Update settings
+                this.settings.updateSetting('darkMode', darkModeCheckbox.checked);
+                
+                // Update theme
+                document.documentElement.setAttribute('data-theme', darkModeCheckbox.checked ? 'dark' : 'light');
+                
+                // Play feedback sound
+                if (this.sounds && this.sounds.play) {
+                    this.sounds.play('click');
+                }
+                
+                console.log(`Dark mode ${darkModeCheckbox.checked ? 'enabled' : 'disabled'}`);
+            });
+        } else {
+            console.warn('Dark mode checkbox not found');
+        }
         
-        // Show home screen initially
-        this.showScreen('home-screen');
-        
-        console.log('Game ready to play');
+        console.log('Settings listeners initialized');
     }
     
     /**
@@ -501,19 +628,6 @@ class Game {
             };
         }
         
-        // Test sounds button
-        const testSoundsBtn = document.getElementById('test-all-sounds');
-        if (testSoundsBtn) {
-            testSoundsBtn.onclick = () => {
-                console.log('Testing sounds...');
-                setTimeout(() => this.sounds.play('correct'), 0);
-                setTimeout(() => this.sounds.play('wrong'), 500);
-                setTimeout(() => this.sounds.play('key'), 1000);
-                setTimeout(() => this.sounds.play('win'), 1500);
-                setTimeout(() => this.sounds.play('lose'), 2500);
-            };
-        }
-
         // Stats button
         const statsBtn = document.querySelector('.stats-btn');
         if (statsBtn) {
@@ -569,100 +683,7 @@ class Game {
             };
         }
         
-        // Setup sound test buttons
-        this.setupSoundTestButtons();
-    }
-    
-    /**
-     * Set up sound test buttons in the settings modal
-     */
-    setupSoundTestButtons() {
-        console.log('Setting up sound test buttons');
-        
-        // Find all sound test buttons
-        const soundButtons = document.querySelectorAll('.sound-test-btn');
-        if (soundButtons.length === 0) {
-            console.warn('No sound test buttons found');
-            return;
-        }
-        
-        // Add click handlers to each button
-        soundButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                try {
-                    // Get the sound name from data attribute
-                    const soundName = btn.getAttribute('data-sound');
-                    if (soundName) {
-                        // Add visual feedback
-                        btn.classList.add('active');
-                        setTimeout(() => {
-                            btn.classList.remove('active');
-                        }, 200);
-                        
-                        // Play the sound
-                        this.sounds.play(soundName);
-                        console.log(`Testing sound: ${soundName}`);
-                    }
-                } catch (e) {
-                    console.error('Error in sound test button:', e);
-                }
-            });
-        });
-        
-        // "Test all sounds" button
-        const testAllSoundsBtn = document.getElementById('test-sounds');
-        if (testAllSoundsBtn) {
-            testAllSoundsBtn.addEventListener('click', () => {
-                console.log('Testing all sounds');
-                
-                const allSounds = ['key', 'correct', 'wrong', 'win', 'lose', 'click', 'select', 'start', 'back'];
-                let delay = 0;
-                
-                allSounds.forEach(sound => {
-                    setTimeout(() => {
-                        this.sounds.play(sound);
-                        console.log(`Playing sound: ${sound}`);
-                    }, delay);
-                    delay += 500; // Half second between sounds
-                });
-            });
-        }
-        
-        // Set up sound checkbox
-        const soundCheckbox = document.getElementById('soundEffects');
-        if (soundCheckbox) {
-            soundCheckbox.checked = this.settings.getSetting('soundEffects') !== false;
-            
-            soundCheckbox.addEventListener('change', () => {
-                this.settings.updateSetting('soundEffects', soundCheckbox.checked);
-                this.sounds.setEnabled(soundCheckbox.checked);
-                
-                // If enabling sounds, play a test sound
-                if (soundCheckbox.checked) {
-                    this.sounds.play('click');
-                }
-                
-                console.log(`Sound effects ${soundCheckbox.checked ? 'enabled' : 'disabled'}`);
-            });
-        }
-        
-        // Set up dark mode checkbox
-        const darkModeCheckbox = document.getElementById('darkMode');
-        if (darkModeCheckbox) {
-            darkModeCheckbox.checked = this.settings.getSetting('darkMode') !== false;
-            
-            darkModeCheckbox.addEventListener('change', () => {
-                this.settings.updateSetting('darkMode', darkModeCheckbox.checked);
-                document.documentElement.setAttribute('data-theme', darkModeCheckbox.checked ? 'dark' : 'light');
-                
-                // Play feedback sound
-                this.sounds.play('click');
-                
-                console.log(`Dark mode ${darkModeCheckbox.checked ? 'enabled' : 'disabled'}`);
-            });
-        }
-        
-        console.log('Sound test buttons initialized');
+        console.log('Event listeners initialized');
     }
     
     /**
@@ -993,8 +1014,8 @@ class Game {
     getNewWordAndRestart() {
         console.log('Getting new word and restarting game');
         
-        // Play start sound
-        this.sounds.play('start');
+        // Reset game state first
+        this.resetGameState();
         
         // Get a new word
         this.currentWord = getRandomWord(this.currentCategory);
@@ -1014,44 +1035,98 @@ class Game {
         // Clear previous game state
         this.resetGame();
         
-        // Setup keyboard event listeners
-        this.setupKeyboardEventListeners();
-        
-        // Get word based on game mode
-        if (mode === 'daily') {
-            // Get daily challenge word
-            this.currentWord = getDailyWord();
+        try {
+            // Handle daily challenge
+            if (mode === 'daily') {
+                console.log('Starting daily challenge...');
+                
+                if (typeof hasDailyChallengeBeenPlayed !== 'function') {
+                    console.error('Daily challenge functions not available!');
+                    alert('Error loading daily challenge. Please reload the page.');
+                    this.showScreen('home-screen');
+                    return;
+                }
+                
+                // Check if daily challenge already played
+                if (hasDailyChallengeBeenPlayed()) {
+                    console.log('Daily challenge already played today');
+                    alert('Արդէն խաղացած էք այսօրուայ մարտահրաւէրը:');
+                    this.showScreen('home-screen');
+                    return;
+                }
+                
+                // Get daily challenge word
+                const todaysWord = getDailyWord();
+                if (!todaysWord) {
+                    console.error('Failed to get daily word');
+                    alert('Չյաջողուեցաւ օրուայ բառը ստանալ։');
+                    this.showScreen('home-screen');
+                    return;
+                }
+                
+                this.currentWord = todaysWord;
+                console.log('Daily challenge word selected:', this.currentWord);
+                
+                // Mark daily challenge as played
+                markDailyChallengeAsPlayed();
+                
+                // Play start sound if enabled
+                if (this.sounds && this.settings.getSetting('soundEffects') !== false) {
+                    this.sounds.play('start');
+                }
+            } else {
+                // Get random word from selected category
+                this.currentCategory = category;
+                
+                if (typeof getRandomWord !== 'function') {
+                    console.error('getRandomWord function not available');
+                    alert('Error loading word. Please reload the page.');
+                    this.showScreen('home-screen');
+                    return;
+                }
+                
+                this.currentWord = getRandomWord(category);
+                if (!this.currentWord) {
+                    console.error('Failed to get random word');
+                    alert('Չյաջողուեցաւ պատահական բառը ստանալ։');
+                    this.showScreen('home-screen');
+                    return;
+                }
+                
+                console.log(`Regular game started with category: ${category}, word: ${this.currentWord}`);
+                
+                // Play start sound if enabled
+                if (this.sounds && this.settings.getSetting('soundEffects') !== false) {
+                    this.sounds.play('start');
+                }
+            }
             
-            // Mark daily challenge as played
-            markDailyChallengeAsPlayed();
+            // Show game area
+            this.showScreen('game-area');
             
-            console.log('Daily challenge started');
-        } else {
-            // Get random word from selected category
-            this.currentCategory = category;
-            this.currentWord = getRandomWord(category);
-            console.log(`Regular game started with category: ${category}`);
+            // Setup keyboard event listeners
+            this.setupKeyboardEventListeners();
+            
+            // Display blank spaces for the word
+            this.updateWordDisplay();
+            
+            // Reset message
+            if (this.messageDisplay) {
+                this.messageDisplay.textContent = '';
+                this.messageDisplay.classList.remove('win-message', 'lose-message');
+            }
+            
+            // Start timer
+            this.startTime = Date.now();
+            this.startTimer();
+            
+            console.log('Game started successfully with word:', this.currentWord);
+            
+        } catch (error) {
+            console.error('Error starting game:', error);
+            alert('Սխալ տեղի ունեցաւ խաղը սկսելու ընթացքին:');
+            this.showScreen('home-screen');
         }
-        
-        // Show game area
-        this.showScreen('game-area');
-        
-        // Display blank spaces for the word
-        this.updateWordDisplay();
-        
-        // Reset message
-        if (this.messageDisplay) {
-            this.messageDisplay.textContent = '';
-        }
-        
-        // Start timer
-        this.startTime = Date.now();
-        this.startTimer();
-        
-        // Play start sound
-        this.sounds.play('start');
-        
-        console.log('Game started with word:', this.currentWord);
     }
     
     /**
@@ -1202,8 +1277,8 @@ class Game {
     /**
      * End the game (win or lose)
      */
-    endGame(isWin) {
-        console.log(`Game ended: ${isWin ? 'won' : 'lost'}`);
+    endGame(result) {
+        console.log(`Game ended: ${result}`);
         
         // Stop timer
         clearInterval(this.timerInterval);
@@ -1213,7 +1288,7 @@ class Game {
         const elapsedTime = this.formatTime(endTime - this.startTime);
         
         // Update statistics
-        this.statistics.updateStats(isWin, endTime - this.startTime);
+        this.statistics.updateStats(result, endTime - this.startTime);
         
         // Disable keyboard
         document.querySelectorAll('.key-btn').forEach(btn => {
@@ -1221,7 +1296,7 @@ class Game {
         });
         
         // Play appropriate sound
-        this.sounds.play(isWin ? 'win' : 'lose');
+        this.sounds.play(result ? 'win' : 'lose');
         
         // Show full word and message
         if (this.wordDisplay) {
@@ -1229,9 +1304,11 @@ class Game {
         }
         
         // Display message
-        let message = isWin ? 'Շնորհավորում ենք, Դուք հաղթեցիք!' : 'Ցավոք, Դուք պարտվեցիք!';
+        let message = result ? 'Շնորհավորում ենք, Դուք հաղթեցիք!' : 'Ցավոք, Դուք պարտվեցիք!';
         if (this.messageDisplay) {
             this.messageDisplay.textContent = message;
+            this.messageDisplay.classList.add(result ? 'win-message' : 'lose-message');
+            this.messageDisplay.style.display = 'block';
         }
         
         // Show restart button if in regular mode
@@ -1271,6 +1348,7 @@ class Game {
         
         // Add the event listener
         document.addEventListener('keydown', this.handleKeyDown);
+        console.log('Keyboard event listener attached');
         
         // Add click handlers for on-screen keyboard
         document.querySelectorAll('.key-btn').forEach(btn => {
@@ -1296,17 +1374,17 @@ class Game {
         console.log('Initializing game components...');
         
         // Set up event listeners for sounds test buttons
-        this.setupSoundTestButtons();
+        // Removed setupSoundTestButtons method
         
         // Set up button event listeners
         this.setupButtonListeners();
         
-        // Show the home screen to start
-        this.showScreen('home-screen');
-        
         // Apply dark mode from settings
-        const darkMode = this.settings.getSetting('darkMode');
+        const darkMode = this.settings.getSetting('darkMode') !== false;
         document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+        
+        // Show home screen
+        this.showScreen('home-screen');
         
         console.log('Game initialization complete');
     }
@@ -1318,12 +1396,14 @@ class Game {
         console.log('Setting up button listeners');
         
         // Play button - shows category selection
-        const playBtn = document.getElementById('play-btn');
+        const playBtn = document.querySelector('.mode-btn[data-mode="regular"]');
         if (playBtn) {
             playBtn.addEventListener('click', () => {
                 this.sounds.play('click');
                 this.showScreen('category-selection');
             });
+        } else {
+            console.error('Regular mode button not found');
         }
         
         // Back buttons
@@ -1346,12 +1426,14 @@ class Game {
         });
         
         // Daily challenge button
-        const dailyBtn = document.getElementById('daily-btn');
+        const dailyBtn = document.querySelector('.mode-btn[data-mode="daily"]');
         if (dailyBtn) {
             dailyBtn.addEventListener('click', () => {
-                this.sounds.play('start');
+                this.sounds.play('click');
                 this.startGame('daily');
             });
+        } else {
+            console.error('Daily challenge button not found');
         }
         
         // Settings button
