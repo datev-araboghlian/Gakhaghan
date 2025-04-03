@@ -325,6 +325,12 @@ h2 {
     cursor: not-allowed;
 }
 
+.key-btn:active, 
+.key-btn.pressed {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
 /* Timer */
 .timer {
     font-size: 1.5rem;
@@ -468,4 +474,68 @@ h2 {
     .hangman-svg {
         height: 200px;
     }
+}
+
+/* Sound test buttons */
+.sound-test-container {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}
+
+.sound-test-container h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.sound-test-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.sound-test-btn {
+    background-color: #6a5acd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+}
+
+.sound-test-btn.playing {
+    background-color: #ff8c00;
+    box-shadow: 0 0 8px rgba(255, 140, 0, 0.5);
+    transform: scale(1.05);
+}
+
+.sound-test-btn:hover {
+    background-color: #5a4abf;
+    transform: translateY(-2px);
+}
+
+.sound-test-btn:active {
+    transform: translateY(1px);
+}
+
+#test-sounds {
+    background-color: #4CAF50;
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+}
+
+#test-sounds:hover {
+    background-color: #45a049;
+}
+
+/* Provide visual feedback for sound state */
+#soundEffects:checked + .settings-option::after {
+    content: "✓";
+    color: #4CAF50;
+    margin-left: 10px;
 }

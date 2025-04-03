@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Կախաղան - Sound Effects Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .sound-result {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .sound-result h3 {
+            margin-top: 0;
+            color: #444;
+        }
+        .download-button {
+            display: inline-block;
+            margin-top: 10px;
+            margin-left: 10px;
+            color: #2196F3;
+            text-decoration: none;
+            padding: 5px 10px;
+            border: 1px solid #2196F3;
+            border-radius: 4px;
+        }
+        .download-button:hover {
+            background-color: #e3f2fd;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .instructions {
+            background-color: #fffde7;
+            padding: 15px;
+            border-left: 4px solid #fbc02d;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Կախաղան - Sound Effects Generator</h1>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <p>This tool generates sound effects for the Կախաղան (Hangman) game:</p>
+            <ul>
+                <li><strong>Key Sound</strong> - Plays when a key is pressed</li>
+                <li><strong>Correct Sound</strong> - Plays when a correct letter is guessed</li>
+                <li><strong>Wrong Sound</strong> - Plays when an incorrect letter is guessed</li>
+                <li><strong>Win Sound</strong> - Plays when the player wins the game</li>
+                <li><strong>Lose Sound</strong> - Plays when the player loses the game</li>
+            </ul>
+            <p>Click "Generate All Sounds" to create all sound effects. You can then play each sound and download them as WAV files.</p>
+        </div>
+        
+        <button id="generate-all">Generate All Sounds</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="sound-effects-generator.js"></script>
+</body>
+</html>
