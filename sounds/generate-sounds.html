@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Game Sounds</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .sound-container {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .downloads {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Կախաղան Game Sound Generator</h1>
+    <p>Click on the buttons below to generate and download sound effects for the game:</p>
+    
+    <div class="sound-container">
+        <h3>Correct Letter Sound</h3>
+        <button onclick="generateCorrectSound()">Generate Correct Sound</button>
+        <a id="correctDownload" class="downloads"></a>
+    </div>
+    
+    <div class="sound-container">
+        <h3>Wrong Letter Sound</h3>
+        <button onclick="generateWrongSound()">Generate Wrong Sound</button>
+        <a id="wrongDownload" class="downloads"></a>
+    </div>
+    
+    <div class="sound-container">
+        <h3>Win Game Sound</h3>
+        <button onclick="generateWinSound()">Generate Win Sound</button>
+        <a id="winDownload" class="downloads"></a>
+    </div>
+    
+    <div class="sound-container">
+        <h3>Lose Game Sound</h3>
+        <button onclick="generateLoseSound()">Generate Lose Sound</button>
+        <a id="loseDownload" class="downloads"></a>
+    </div>
+    
+    <div class="sound-container">
+        <h3>Key Press Sound</h3>
+        <button onclick="generateKeySound()">Generate Key Sound</button>
+        <a id="keyDownload" class="downloads"></a>
+    </div>
+
+    <script>
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function createDownloadLink(buffer, filename, elementId) {
+            // Convert buffer to WAV format
+            const wav = audioBufferToWav(buffer);
+            const blob = new Blob([wav], { type: 'audio/wav' });
+            
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const link = document.getElementById(elementId);
+            link.href = url;
+            link.download = filename;
+            link.textContent = `Download ${filename}`;
+        }
+        
+        function generateCorrectSound() {
+            const duration = 0.3;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const channelData = buffer.getChannelData(0);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                // Generate a pleasing bell-like sound
+                const t = i / buffer.length;
+                channelData[i] = 0.5 * Math.sin(2 * Math.PI * 880 * t * t) * Math.exp(-3 * t);
+            }
+            
+            createDownloadLink(buffer, 'correct.wav', 'correctDownload');
+            playSound(buffer);
+        }
+        
+        function generateWrongSound() {
+            const duration = 0.4;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const channelData = buffer.getChannelData(0);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                // Generate a descending buzz sound
+                const t = i / buffer.length;
+                channelData[i] = 0.5 * Math.sin(2 * Math.PI * (300 - 100 * t) * t) * Math.exp(-2 * t);
+            }
+            
+            createDownloadLink(buffer, 'wrong.wav', 'wrongDownload');
+            playSound(buffer);
+        }
+        
+        function generateWinSound() {
+            const duration = 1.5;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const channelData = buffer.getChannelData(0);
+            
+            // Generate an ascending sequence of tones
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            const noteDuration = duration / notes.length;
+            
+            for (let i = 0; i < buffer.length; i++) {
+                const t = i / buffer.length * duration;
+                const noteIndex = Math.min(Math.floor(t / noteDuration), notes.length - 1);
+                const noteT = (t - noteIndex * noteDuration) / noteDuration;
+                
+                channelData[i] = 0.5 * Math.sin(2 * Math.PI * notes[noteIndex] * t) * 
+                                 (1 - Math.exp(-5 * noteT)) * Math.exp(-3 * noteT);
+            }
+            
+            createDownloadLink(buffer, 'win.wav', 'winDownload');
+            playSound(buffer);
+        }
+        
+        function generateLoseSound() {
+            const duration = 1.0;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const channelData = buffer.getChannelData(0);
+            
+            // Generate a descending sequence of tones
+            const notes = [659.25, 622.25, 587.33, 523.25]; // E5, D#5, D5, C5
+            const noteDuration = duration / notes.length;
+            
+            for (let i = 0; i < buffer.length; i++) {
+                const t = i / buffer.length * duration;
+                const noteIndex = Math.min(Math.floor(t / noteDuration), notes.length - 1);
+                const noteT = (t - noteIndex * noteDuration) / noteDuration;
+                
+                channelData[i] = 0.4 * Math.sin(2 * Math.PI * notes[noteIndex] * t) * 
+                                 (1 - Math.exp(-8 * noteT)) * Math.exp(-2 * noteT);
+            }
+            
+            createDownloadLink(buffer, 'lose.wav', 'loseDownload');
+            playSound(buffer);
+        }
+        
+        function generateKeySound() {
+            const duration = 0.1;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const channelData = buffer.getChannelData(0);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                // Generate a quick click sound
+                const t = i / buffer.length;
+                channelData[i] = 0.3 * Math.sin(2 * Math.PI * 1200 * t) * Math.exp(-20 * t);
+            }
+            
+            createDownloadLink(buffer, 'key.wav', 'keyDownload');
+            playSound(buffer);
+        }
+        
+        function playSound(buffer) {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start();
+        }
+        
+        // Function to convert AudioBuffer to WAV format
+        function audioBufferToWav(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16;
+            
+            let result;
+            if (numChannels === 2) {
+                result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+            } else {
+                result = buffer.getChannelData(0);
+            }
+            
+            return encodeWAV(result, format, sampleRate, numChannels, bitDepth);
+        }
+        
+        function interleave(left, right) {
+            const length = left.length + right.length;
+            const result = new Float32Array(length);
+            
+            let index = 0;
+            let inputIndex = 0;
+            
+            while (index < length) {
+                result[index++] = left[inputIndex];
+                result[index++] = right[inputIndex];
+                inputIndex++;
+            }
+            
+            return result;
+        }
+        
+        function floatTo16BitPCM(output, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, input[i]));
+                output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+        
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+        
+        function encodeWAV(samples, format, sampleRate, numChannels, bitDepth) {
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            
+            const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+            const view = new DataView(buffer);
+            
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+            writeString(view, 8, 'WAVE');
+            
+            // FMT sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // subchunk size
+            view.setUint16(20, format, true); // audio format
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * blockAlign, true); // byte rate
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+            
+            // Data sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * bytesPerSample, true);
+            floatTo16BitPCM(view, 44, samples);
+            
+            return buffer;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Կախաղան Sound Generator</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .sound-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .sound-item h3 {
+            margin-top: 0;
+        }
+        a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #2196F3;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .instructions {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Կախաղան Game Sound Generator</h1>
+    
+    <div class="instructions">
+        <h2>Instructions:</h2>
+        <ol>
+            <li>Click each "Generate" button to create the sound</li>
+            <li>Click "Play" to preview the sound</li>
+            <li>Click "Download" to save the sound file</li>
+            <li>Place all downloaded sound files in the <code>/sounds</code> directory of your game</li>
+        </ol>
+    </div>
+    
+    <div class="container">
+        <div class="sound-item">
+            <h3>1. Correct Letter Sound</h3>
+            <button onclick="generateCorrectSound()">Generate Sound</button>
+            <button onclick="playSound('correct')">Play Sound</button>
+            <div id="correct-download"></div>
+        </div>
+        
+        <div class="sound-item">
+            <h3>2. Wrong Letter Sound</h3>
+            <button onclick="generateWrongSound()">Generate Sound</button>
+            <button onclick="playSound('wrong')">Play Sound</button>
+            <div id="wrong-download"></div>
+        </div>
+        
+        <div class="sound-item">
+            <h3>3. Key Press Sound</h3>
+            <button onclick="generateKeySound()">Generate Sound</button>
+            <button onclick="playSound('key')">Play Sound</button>
+            <div id="key-download"></div>
+        </div>
+        
+        <div class="sound-item">
+            <h3>4. Win Game Sound</h3>
+            <button onclick="generateWinSound()">Generate Sound</button>
+            <button onclick="playSound('win')">Play Sound</button>
+            <div id="win-download"></div>
+        </div>
+        
+        <div class="sound-item">
+            <h3>5. Lose Game Sound</h3>
+            <button onclick="generateLoseSound()">Generate Sound</button>
+            <button onclick="playSound('lose')">Play Sound</button>
+            <div id="lose-download"></div>
+        </div>
+        
+        <div class="sound-item">
+            <h3>Generate All Sounds</h3>
+            <button onclick="generateAllSounds()">Generate All Sounds</button>
+        </div>
+    </div>
+
+    <script>
+        // Sound buffers to store generated sounds
+        const soundBuffers = {};
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Generate and play the correct letter sound (short beep)
+        function generateCorrectSound() {
+            const duration = 0.3;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                // A pleasant bell-like sound
+                const t = i / buffer.length;
+                data[i] = 0.5 * Math.sin(2 * Math.PI * 880 * t * t) * Math.exp(-3 * t);
+            }
+            
+            soundBuffers['correct'] = buffer;
+            createDownloadLink('correct', buffer, 'mp3');
+            
+            return buffer;
+        }
+        
+        // Generate and play the wrong letter sound
+        function generateWrongSound() {
+            const duration = 0.4;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                // A descending error sound
+                const t = i / buffer.length;
+                data[i] = 0.5 * Math.sin(2 * Math.PI * (300 - 100 * t) * t) * Math.exp(-2 * t);
+            }
+            
+            soundBuffers['wrong'] = buffer;
+            createDownloadLink('wrong', buffer, 'mp3');
+            
+            return buffer;
+        }
+        
+        // Generate and play key press sound
+        function generateKeySound() {
+            const duration = 0.1;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                // A quick click sound
+                const t = i / buffer.length;
+                data[i] = 0.3 * Math.sin(2 * Math.PI * 1200 * t) * Math.exp(-20 * t);
+            }
+            
+            soundBuffers['key'] = buffer;
+            createDownloadLink('key', buffer, 'mp3');
+            
+            return buffer;
+        }
+        
+        // Generate and play win game sound
+        function generateWinSound() {
+            const duration = 1.5;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            // Create a victory melody
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            const noteDuration = duration / notes.length;
+            
+            for (let i = 0; i < buffer.length; i++) {
+                const t = i / audioContext.sampleRate;
+                const noteIndex = Math.min(Math.floor(t / noteDuration), notes.length - 1);
+                const noteT = (t - noteIndex * noteDuration) / noteDuration;
+                
+                // Create a more complex sound with harmonics
+                const fundamental = Math.sin(2 * Math.PI * notes[noteIndex] * t);
+                const harmonic1 = 0.5 * Math.sin(2 * Math.PI * notes[noteIndex] * 2 * t);
+                const harmonic2 = 0.25 * Math.sin(2 * Math.PI * notes[noteIndex] * 3 * t);
+                
+                // Apply envelope
+                const envelope = Math.min(1, noteT * 10) * Math.pow(1 - noteT, 2);
+                
+                data[i] = 0.5 * (fundamental + harmonic1 + harmonic2) * envelope;
+            }
+            
+            soundBuffers['win'] = buffer;
+            createDownloadLink('win', buffer, 'mp3');
+            
+            return buffer;
+        }
+        
+        // Generate and play lose game sound
+        function generateLoseSound() {
+            const duration = 1.0;
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            // Create a sad descending melody
+            const notes = [659.25, 622.25, 587.33, 523.25]; // E5, D#5, D5, C5
+            const noteDuration = duration / notes.length;
+            
+            for (let i = 0; i < buffer.length; i++) {
+                const t = i / audioContext.sampleRate;
+                const noteIndex = Math.min(Math.floor(t / noteDuration), notes.length - 1);
+                const noteT = (t - noteIndex * noteDuration) / noteDuration;
+                
+                // Create a more complex sound with harmonics
+                const fundamental = Math.sin(2 * Math.PI * notes[noteIndex] * t);
+                const harmonic1 = 0.3 * Math.sin(2 * Math.PI * notes[noteIndex] * 2 * t);
+                
+                // Apply envelope
+                const envelope = Math.min(1, noteT * 5) * Math.pow(1 - noteT, 2);
+                
+                data[i] = 0.4 * (fundamental + harmonic1) * envelope;
+            }
+            
+            soundBuffers['lose'] = buffer;
+            createDownloadLink('lose', buffer, 'mp3');
+            
+            return buffer;
+        }
+        
+        // Generate all sounds at once
+        function generateAllSounds() {
+            generateCorrectSound();
+            generateWrongSound();
+            generateKeySound();
+            generateWinSound();
+            generateLoseSound();
+        }
+        
+        // Play a specific sound from the buffer
+        function playSound(name) {
+            // Create the sound if it doesn't exist
+            if (!soundBuffers[name]) {
+                if (name === 'correct') generateCorrectSound();
+                else if (name === 'wrong') generateWrongSound();
+                else if (name === 'key') generateKeySound();
+                else if (name === 'win') generateWinSound();
+                else if (name === 'lose') generateLoseSound();
+            }
+            
+            // Play the sound
+            if (soundBuffers[name]) {
+                const source = audioContext.createBufferSource();
+                source.buffer = soundBuffers[name];
+                source.connect(audioContext.destination);
+                source.start();
+            }
+        }
+        
+        // Convert audio buffer to WAV format and create download link
+        function createDownloadLink(name, buffer, format) {
+            // Convert buffer to desired format
+            const audioBlob = audioBufferToFile(buffer, format);
+            
+            // Create download link
+            const url = URL.createObjectURL(audioBlob);
+            const downloadDiv = document.getElementById(`${name}-download`);
+            downloadDiv.innerHTML = `<a href="${url}" download="${name}.${format}">Download ${name}.${format}</a>`;
+        }
+        
+        // Convert AudioBuffer to file based on format
+        function audioBufferToFile(buffer, format) {
+            if (format.toLowerCase() === 'wav') {
+                return audioBufferToWav(buffer);
+            } else if (format.toLowerCase() === 'mp3') {
+                // For simplicity, we're using WAV format even when requesting MP3
+                // In a production app, you'd use a proper MP3 encoder
+                return audioBufferToWav(buffer);
+            }
+            
+            // Default to WAV
+            return audioBufferToWav(buffer);
+        }
+        
+        // Convert AudioBuffer to WAV
+        function audioBufferToWav(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16;
+            
+            let result;
+            if (numChannels === 2) {
+                result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+            } else {
+                result = buffer.getChannelData(0);
+            }
+            
+            const wavBuffer = encodeWAV(result, format, sampleRate, numChannels, bitDepth);
+            return new Blob([wavBuffer], { type: 'audio/wav' });
+        }
+        
+        // Interleave two audio channels
+        function interleave(left, right) {
+            const length = left.length + right.length;
+            const result = new Float32Array(length);
+            
+            let index = 0;
+            let inputIndex = 0;
+            
+            while (index < length) {
+                result[index++] = left[inputIndex];
+                result[index++] = right[inputIndex];
+                inputIndex++;
+            }
+            
+            return result;
+        }
+        
+        // Convert float audio data to 16-bit PCM
+        function floatTo16BitPCM(output, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, input[i]));
+                output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+        
+        // Write string to the DataView
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+        
+        // Encode audio data to WAV format
+        function encodeWAV(samples, format, sampleRate, numChannels, bitDepth) {
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            
+            const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+            const view = new DataView(buffer);
+            
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+            writeString(view, 8, 'WAVE');
+            
+            // FMT sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // subchunk size
+            view.setUint16(20, format, true); // audio format
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * blockAlign, true); // byte rate
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+            
+            // Data sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * bytesPerSample, true);
+            floatTo16BitPCM(view, 44, samples);
+            
+            return buffer;
+        }
+    </script>
+</body>
+</html>
