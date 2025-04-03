@@ -1067,9 +1067,10 @@ class Game {
             btn.classList.remove('correct', 'wrong');
         });
         
-        // Clear previous hangman drawing
+        // Clear the hangman and draw the gallows
         if (this.hangman) {
             this.hangman.clear();
+            this.hangman.drawPart(0); // Draw the gallows at the start of the game
         }
         
         // Clear the message
@@ -1260,6 +1261,7 @@ class Game {
         // Clear the hangman drawing
         if (this.hangman) {
             this.hangman.clear();
+            this.hangman.drawPart(0); // Make sure the gallows is drawn
         } else {
             console.error('Hangman renderer not found');
         }
