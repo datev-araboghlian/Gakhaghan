@@ -22,6 +22,8 @@
     --button-hover: #4338ca;
     --button-text: #f7fafc;
     --timer-color: #f7fafc;
+    --warning-color: #ffc107;
+    --error-color: #e74c3c;
 }
 
 :root[data-theme="light"] {
@@ -47,6 +49,8 @@
     --button-hover: #3730a3;
     --button-text: #ffffff;
     --timer-color: #1a202c;
+    --warning-color: #ffc107;
+    --error-color: #e74c3c;
 }
 
 /* Global styles */
@@ -406,6 +410,40 @@ h2 {
 
 .stats-value {
     font-size: 1.2rem;
+}
+
+/* Stats Modal */
+.stats-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.stats-value {
+    font-weight: bold;
+}
+
+.reset-stats-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#reset-stats-btn {
+    background-color: var(--warning-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+#reset-stats-btn:hover {
+    background-color: var(--error-color);
 }
 
 /* Message display */

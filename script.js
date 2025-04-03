@@ -314,12 +314,52 @@ class Hangman {
  */
 class Statistics {
     constructor() {
+        console.log('Initializing Statistics');
         this.stats = this.loadStats();
+        
+        // Ensure all required fields exist
+        this.ensureStatsFields();
+        
+        console.log('Statistics initialized with:', this.stats);
     }
-
+    
+    /**
+     * Ensure all stats fields exist with valid values
+     */
+    ensureStatsFields() {
+        const defaultStats = {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            currentStreak: 0,
+            maxStreak: 0,
+            bestTime: null,
+            totalTime: 0
+        };
+        
+        // Add any missing fields from default stats
+        for (const [key, value] of Object.entries(defaultStats)) {
+            if (this.stats[key] === undefined) {
+                console.log(`Adding missing stat field: ${key}`);
+                this.stats[key] = value;
+            }
+        }
+    }
+    
     loadStats() {
-        const savedStats = localStorage.getItem('hangman_stats');
-        return savedStats ? JSON.parse(savedStats) : {
+        try {
+            const savedStats = localStorage.getItem('hangman_stats');
+            if (savedStats) {
+                const parsedStats = JSON.parse(savedStats);
+                console.log('Loaded saved stats:', parsedStats);
+                return parsedStats;
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+        
+        // Return default stats if nothing loaded
+        console.log('Creating default stats');
+        return {
             gamesPlayed: 0,
             gamesWon: 0,
             currentStreak: 0,
@@ -328,67 +368,142 @@ class Statistics {
             totalTime: 0
         };
     }
-
+    
     saveStats() {
-        localStorage.setItem('hangman_stats', JSON.stringify(this.stats));
+        try {
+            localStorage.setItem('hangman_stats', JSON.stringify(this.stats));
+            console.log('Stats saved successfully');
+        } catch (error) {
+            console.error('Error saving stats:', error);
+        }
+    }
+    
+    /**
+     * Reset all statistics
+     */
+    resetStats() {
+        this.stats = {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            currentStreak: 0,
+            maxStreak: 0,
+            bestTime: null,
+            totalTime: 0
+        };
+        this.saveStats();
+        this.updateDisplay();
+        console.log('Statistics reset');
     }
 
     updateStats(won, timeElapsed) {
+        console.log(`Updating stats: won=${won}, timeElapsed=${timeElapsed}ms`);
+        
+        // Ensure timeElapsed is a number
+        timeElapsed = Number(timeElapsed);
+        
+        // Update game counts
         this.stats.gamesPlayed++;
         
         if (won) {
+            // Update win statistics
             this.stats.gamesWon++;
             this.stats.currentStreak++;
             
+            // Update max streak if needed
             if (this.stats.currentStreak > this.stats.maxStreak) {
                 this.stats.maxStreak = this.stats.currentStreak;
             }
             
-            // Track best time
-            if (!this.stats.bestTime || timeElapsed < this.stats.bestTime) {
-                this.stats.bestTime = timeElapsed;
+            // Only track time for wins
+            if (!isNaN(timeElapsed) && timeElapsed > 0) {
+                // Convert to seconds for storage
+                const timeInSeconds = Math.floor(timeElapsed / 1000);
+                console.log(`Recording time: ${timeInSeconds} seconds`);
+                
+                // Track best time
+                if (!this.stats.bestTime || timeInSeconds < this.stats.bestTime) {
+                    this.stats.bestTime = timeInSeconds;
+                }
+                
+                // Add to total time
+                this.stats.totalTime += timeInSeconds;
             }
-            
-            // Add to total time
-            this.stats.totalTime += timeElapsed;
         } else {
+            // Reset streak on loss
             this.stats.currentStreak = 0;
         }
         
+        // Save and display updated stats
         this.saveStats();
         this.updateDisplay();
+        
+        console.log('Stats updated:', this.stats);
     }
-
+    
+    /**
+     * Update the stats display in the UI
+     */
     updateDisplay() {
-        // Format stats for display
-        const winPercentage = this.stats.gamesPlayed > 0 
-            ? Math.round((this.stats.gamesWon / this.stats.gamesPlayed) * 100) 
-            : 0;
+        console.log('Updating stats display');
         
-        const avgTime = this.stats.gamesWon > 0 
-            ? Math.round(this.stats.totalTime / this.stats.gamesWon) 
-            : 0;
-        
-        // Update stats in the modal
-        document.getElementById('gamesPlayed').textContent = this.stats.gamesPlayed;
-        document.getElementById('gamesWon').textContent = this.stats.gamesWon;
-        document.getElementById('winPercentage').textContent = `${winPercentage}%`;
-        document.getElementById('currentStreak').textContent = this.stats.currentStreak;
-        document.getElementById('maxStreak').textContent = this.stats.maxStreak;
-        
-        if (avgTime > 0) {
-            document.getElementById('averageTime').textContent = this.formatTime(avgTime * 1000);
-        } else {
-            document.getElementById('averageTime').textContent = '--:--';
+        try {
+            // Ensure all stats fields exist
+            this.ensureStatsFields();
+            
+            // Calculate win percentage
+            const winPercentage = this.stats.gamesPlayed > 0 
+                ? Math.round((this.stats.gamesWon / this.stats.gamesPlayed) * 100) 
+                : 0;
+            
+            // Calculate average time in seconds
+            const avgTime = this.stats.gamesWon > 0 
+                ? Math.round(this.stats.totalTime / this.stats.gamesWon) 
+                : 0;
+            
+            console.log(`Win percentage: ${winPercentage}%, Average time: ${avgTime}s`);
+            
+            // Update stats in the modal - manually set each element to ensure proper updates
+            const gamesPlayedElement = document.getElementById('gamesPlayed');
+            if (gamesPlayedElement) gamesPlayedElement.textContent = this.stats.gamesPlayed;
+            
+            const gamesWonElement = document.getElementById('gamesWon');
+            if (gamesWonElement) gamesWonElement.textContent = this.stats.gamesWon;
+            
+            const winPercentageElement = document.getElementById('winPercentage');
+            if (winPercentageElement) winPercentageElement.textContent = `${winPercentage}%`;
+            
+            const currentStreakElement = document.getElementById('currentStreak');
+            if (currentStreakElement) currentStreakElement.textContent = this.stats.currentStreak;
+            
+            const maxStreakElement = document.getElementById('maxStreak');
+            if (maxStreakElement) maxStreakElement.textContent = this.stats.maxStreak;
+            
+            // Update average time with proper formatting
+            const avgTimeElement = document.getElementById('averageTime');
+            if (avgTimeElement) {
+                if (avgTime > 0) {
+                    avgTimeElement.textContent = this.formatTime(avgTime * 1000);
+                } else {
+                    avgTimeElement.textContent = '--:--';
+                }
+            }
+        } catch (error) {
+            console.error('Error updating stats display:', error);
         }
     }
     
     // Format time as mm:ss
     formatTime(timeMs) {
-        const seconds = Math.floor(timeMs / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        try {
+            const totalSeconds = Math.floor(timeMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } catch (error) {
+            console.error('Error formatting time:', error);
+            return '--:--';
+        }
     }
 }
 
@@ -478,31 +593,30 @@ class Game {
         console.log('Initializing game components...');
         
         try {
-            // Set up button listeners
+            // Apply dark mode based on settings
+            this.applyDarkMode();
+            
+            // Setup event listeners
             this.setupButtonListeners();
-            
-            // Set up settings event listeners
             this.setupSettingsListeners();
-            
-            // Apply dark mode from settings
-            const darkMode = this.settings.getSetting('darkMode') !== false;
-            document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-            
-            // Initialize sound system
-            if (this.sounds) {
-                if (!this.sounds.audioContext) {
-                    this.sounds.initAudioContext();
-                }
-            }
             
             // Show home screen
             this.showScreen('home-screen');
             
-            console.log('Game initialization complete!');
+            console.log('Game initialized successfully');
         } catch (error) {
             console.error('Error during game initialization:', error);
             alert('Սխալ տեղի ունեցաւ խաղը բացելու ընթացքին:');
         }
+    }
+    
+    /**
+     * Apply dark mode based on current setting
+     */
+    applyDarkMode() {
+        const darkModeEnabled = this.settings.getSetting('darkMode');
+        console.log('Applying dark mode:', darkModeEnabled);
+        document.documentElement.setAttribute('data-theme', darkModeEnabled ? 'dark' : 'light');
     }
     
     /**
@@ -543,7 +657,7 @@ class Game {
                 this.settings.updateSetting('darkMode', darkModeCheckbox.checked);
                 
                 // Update theme
-                document.documentElement.setAttribute('data-theme', darkModeCheckbox.checked ? 'dark' : 'light');
+                this.applyDarkMode();
                 
                 // Play feedback sound
                 if (this.sounds && this.sounds.play) {
@@ -1264,7 +1378,9 @@ class Game {
             // Reduce attempts and update hangman
             this.remainingAttempts--;
             if (this.hangman) {
-                this.hangman.drawPart(5 - this.remainingAttempts);
+                // Calculate the correct part to draw (6 = gallows, 1-6 = body parts)
+                // We want to draw parts 1-6 as attempts go from 5 to 0
+                this.hangman.drawPart(6 - this.remainingAttempts);
             }
             
             // Check if game is lost
@@ -1278,17 +1394,20 @@ class Game {
      * End the game (win or lose)
      */
     endGame(result) {
-        console.log(`Game ended: ${result}`);
+        console.log(`Game ended: ${result ? 'win' : 'loss'}`);
         
         // Stop timer
         clearInterval(this.timerInterval);
         
         // Calculate elapsed time
         const endTime = Date.now();
-        const elapsedTime = this.formatTime(endTime - this.startTime);
+        const timeElapsedMs = endTime - this.startTime;
+        const formattedTime = this.formatTime(timeElapsedMs);
         
-        // Update statistics
-        this.statistics.updateStats(result, endTime - this.startTime);
+        console.log(`Game duration: ${formattedTime} (${timeElapsedMs}ms)`);
+        
+        // Update statistics with elapsed time in milliseconds
+        this.statistics.updateStats(result, timeElapsedMs);
         
         // Disable keyboard
         document.querySelectorAll('.key-btn').forEach(btn => {
@@ -1323,7 +1442,7 @@ class Game {
         
         // Show alert with game results
         setTimeout(() => {
-            alert(`${message}\nԽաղացած ժամանակ: ${elapsedTime}`);
+            alert(`${message}\nԽաղացած ժամանակ: ${formattedTime}`);
         }, 500);
     }
     
@@ -1373,15 +1492,12 @@ class Game {
     initialize() {
         console.log('Initializing game components...');
         
-        // Set up event listeners for sounds test buttons
-        // Removed setupSoundTestButtons method
+        // Apply dark mode based on settings
+        this.applyDarkMode();
         
-        // Set up button event listeners
+        // Setup event listeners
         this.setupButtonListeners();
-        
-        // Apply dark mode from settings
-        const darkMode = this.settings.getSetting('darkMode') !== false;
-        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+        this.setupSettingsListeners();
         
         // Show home screen
         this.showScreen('home-screen');
@@ -1581,4 +1697,89 @@ function validateElement(id, name) {
         throw new Error(`${name} element not found`);
     }
     return element;
+}
+
+// Event Listeners for UI elements
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded');
+    
+    // Initialize UI components
+    setupModals();
+    setupButtons();
+    
+    // Update statistics display
+    const statistics = new Statistics();
+    statistics.updateDisplay();
+    
+    // Initialize the game
+    const game = new Game();
+    window.gameInstance = game;
+    
+    // Find current theme in localStorage and apply it
+    if (localStorage.getItem('theme')) {
+        game.settings.theme = localStorage.getItem('theme');
+    }
+    game.applyDarkMode();
+});
+
+function setupButtons() {
+    // Setup all button click events
+    
+    // Game control buttons
+    document.getElementById('start-game-btn').addEventListener('click', function() {
+        window.gameInstance.showCategorySelectModal();
+        window.gameInstance.sounds.play('click');
+    });
+    
+    document.getElementById('restart-game').addEventListener('click', function() {
+        window.gameInstance.restartGame();
+        window.gameInstance.sounds.play('click');
+    });
+    
+    // Daily challenge button
+    document.getElementById('daily-challenge-btn').addEventListener('click', function() {
+        window.gameInstance.startDailyChallenge();
+        window.gameInstance.sounds.play('click');
+    });
+    
+    // Settings button
+    document.getElementById('settings-btn').addEventListener('click', function() {
+        document.getElementById('settingsModal').style.display = 'block';
+        window.gameInstance.sounds.play('click');
+    });
+    
+    // Stats button
+    document.getElementById('stats-btn').addEventListener('click', function() {
+        document.getElementById('statsModal').style.display = 'block';
+        window.gameInstance.sounds.play('click');
+        
+        // Refresh statistics
+        window.gameInstance.statistics.updateDisplay();
+    });
+    
+    // Settings controls
+    document.getElementById('sound-toggle').addEventListener('change', function() {
+        window.gameInstance.settings.soundEnabled = this.checked;
+        window.gameInstance.saveSettings();
+        
+        if (this.checked) {
+            window.gameInstance.sounds.play('click');
+        }
+    });
+    
+    document.getElementById('dark-mode-toggle').addEventListener('change', function() {
+        window.gameInstance.settings.darkMode = this.checked;
+        window.gameInstance.saveSettings();
+        window.gameInstance.applyDarkMode();
+        window.gameInstance.sounds.play('click');
+    });
+    
+    // Reset stats button
+    document.getElementById('reset-stats-btn').addEventListener('click', function() {
+        if (confirm('Դուք իսկապէ՞ս ցանկանում էք ջնջել բոլոր վիճակագրութիւնը:')) {
+            window.gameInstance.statistics.resetStats();
+            window.gameInstance.sounds.play('click');
+            alert('Վիճակագրութիւնը ջնջուեց:');
+        }
+    });
 }
