@@ -29,6 +29,10 @@ class HangmanGame {
         this.remainingAttempts = 6;
         this.gameActive = false;
         
+        // Timer properties
+        this.timerInterval = null;
+        this.timerSeconds = 0;
+        
         // UI Elements - cached for performance
         this.wordDisplay = document.querySelector('.word-display');
         this.messageElement = document.querySelector('.message');
@@ -67,8 +71,13 @@ class HangmanGame {
      */
     applySettings() {
         // Apply dark mode if enabled
+        const html = document.documentElement;
         if (this.settingsManager.getSetting('darkMode')) {
+            html.setAttribute('data-theme', 'dark');
             document.body.classList.add('dark-mode');
+        } else {
+            html.setAttribute('data-theme', 'light');
+            document.body.classList.remove('dark-mode');
         }
         
         // Apply sound settings
@@ -128,15 +137,6 @@ class HangmanGame {
         const restartBtn = document.getElementById('restart-game');
         if (restartBtn) {
             restartBtn.onclick = () => {
-                this.soundManager.play('click');
-                this.restartGame();
-            };
-        }
-        
-        // Bottom restart button (new)
-        const bottomRestartBtn = document.getElementById('bottom-restart-game');
-        if (bottomRestartBtn) {
-            bottomRestartBtn.onclick = () => {
                 this.soundManager.play('click');
                 this.restartGame();
             };
@@ -206,9 +206,12 @@ class HangmanGame {
                 this.settingsManager.updateSetting('darkMode', darkModeCheckbox.checked);
                 
                 // Apply dark mode immediately
+                const html = document.documentElement;
                 if (darkModeCheckbox.checked) {
+                    html.setAttribute('data-theme', 'dark');
                     document.body.classList.add('dark-mode');
                 } else {
+                    html.setAttribute('data-theme', 'light');
                     document.body.classList.remove('dark-mode');
                 }
             };
@@ -381,6 +384,9 @@ class HangmanGame {
         
         // Set game as active
         this.gameActive = true;
+        
+        // Start the timer
+        this.startTimer();
     }
     
     /**
@@ -395,6 +401,13 @@ class HangmanGame {
         if (this.messageElement) {
             this.messageElement.textContent = '';
             this.messageElement.className = 'message';
+        }
+        
+        // Reset timer
+        this.stopTimer();
+        this.timerSeconds = 0;
+        if (this.timerElement) {
+            this.timerElement.textContent = '00:00';
         }
         
         // Reset hangman drawing
@@ -511,6 +524,9 @@ class HangmanGame {
             btn.disabled = true;
         });
         
+        // Stop the timer
+        this.stopTimer();
+        
         // Play appropriate sound
         this.soundManager.play(result ? 'win' : 'lose');
         
@@ -529,10 +545,52 @@ class HangmanGame {
         // Update statistics
         this.statisticsManager.updateStats(result);
         
-        // Show alert with result
-        setTimeout(() => {
-            alert(message);
-        }, 500);
+        // Show restart button
+        document.getElementById('restart-game').style.display = 'block';
+    }
+    
+    /**
+     * Start the game timer
+     */
+    startTimer() {
+        // Clear any existing timer
+        this.stopTimer();
+        
+        // Reset timer seconds
+        this.timerSeconds = 0;
+        
+        // Update the timer display initially
+        this.updateTimerDisplay();
+        
+        // Start the interval
+        this.timerInterval = setInterval(() => {
+            this.timerSeconds++;
+            this.updateTimerDisplay();
+        }, 1000);
+    }
+    
+    /**
+     * Update the timer display
+     */
+    updateTimerDisplay() {
+        if (!this.timerElement) return;
+        
+        const minutes = Math.floor(this.timerSeconds / 60);
+        const seconds = this.timerSeconds % 60;
+        
+        // Format as MM:SS
+        this.timerElement.textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    /**
+     * Stop the game timer
+     */
+    stopTimer() {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
     }
 }
 
