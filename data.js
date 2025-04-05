@@ -1,5 +1,5 @@
 // Word categories and their data
-export const wordData = {
+const wordData = {
     'Կերակուր եւ խոհանոց': [
         'լաւաշ',       // lavash bread
         'տոլմա',       // dolma
@@ -157,12 +157,12 @@ let cachedDailyWord = null;
 let cachedDate = null;
 
 // Get all words from all categories
-export function getAllWords() {
+function getAllWords() {
     return Object.values(wordData).flat();
 }
 
 // Get the daily word based on the current date
-export function getDailyWord() {
+function getDailyWord() {
     const today = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
     
     // Return cached value if we already calculated it today
@@ -183,20 +183,20 @@ export function getDailyWord() {
 }
 
 // Check if the daily challenge was already played today
-export function hasDailyChallengeBeenPlayed() {
+function hasDailyChallengeBeenPlayed() {
     const today = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
     const lastPlayedDate = localStorage.getItem('hangman_daily_last_played');
     return lastPlayedDate === today;
 }
 
 // Mark daily challenge as played for today
-export function markDailyChallengeAsPlayed() {
+function markDailyChallengeAsPlayed() {
     const today = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
     localStorage.setItem('hangman_daily_last_played', today);
 }
 
 // Get a random word from a specific category or any category if none specified
-export function getRandomWord(category = null) {
+function getRandomWord(category = null) {
     // Get the daily word to exclude it
     const dailyWord = getDailyWord();
     

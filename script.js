@@ -1,744 +1,155 @@
-// Import functions from data.js
-import { wordData, getAllWords, getDailyWord, hasDailyChallengeBeenPlayed, markDailyChallengeAsPlayed, getRandomWord } from './data.js';
-
-// Ensure we have window.AudioContext or webkitAudioContext
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-
 /**
- * Sound Manager Class
- * Handles all game sound effects
+ * Simplified Hangman Game
+ * A complete rewrite focusing on reliability and simplicity
  */
-class SoundManager {
-    constructor() {
-        console.log('Initializing SoundManager');
-        
-        // Default properties
-        this.enabled = localStorage.getItem('soundEffects') !== 'false';
-        this.audioContext = null;
-        this.sounds = {};
-        
-        // Try to create audio context
-        this.initAudioContext();
-        
-        // Initialize with a single click handler that creates the context
-        // This is needed for browsers that require user interaction
-        document.addEventListener('click', () => {
-            if (!this.audioContext) {
-                this.initAudioContext();
-            } else if (this.audioContext.state === 'suspended') {
-                this.audioContext.resume();
-            }
-        }, { once: true });
-        
-        console.log('SoundManager initialization complete, enabled:', this.enabled);
-    }
-    
-    // Initialize AudioContext
-    initAudioContext() {
-        try {
-            if (!this.audioContext) {
-                // Use the standard or webkit audio context
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (AudioContextClass) {
-                    this.audioContext = new AudioContextClass();
-                    console.log('Audio context created successfully, state:', this.audioContext.state);
-                    
-                    // Resume context if suspended
-                    if (this.audioContext.state === 'suspended') {
-                        this.audioContext.resume().then(() => {
-                            console.log('Audio context resumed on initialization');
-                        });
-                    }
-                    
-                    // Generate sounds
-                    this.loadSounds();
-                } else {
-                    console.error('AudioContext not supported in this browser');
-                }
-            }
-        } catch (e) {
-            console.error('Failed to initialize audio context:', e);
-        }
-    }
-    
-    // Generate a simple beep sound - simplified version
-    generateBeep(frequency, duration, volume = 0.5) {
-        return {
-            play: () => {
-                if (!this.enabled || !this.audioContext) {
-                    console.log('Cannot play beep - sound disabled or no audio context');
-                    return;
-                }
-                
-                try {
-                    // Make sure context is running
-                    if (this.audioContext.state !== 'running') {
-                        this.audioContext.resume();
-                    }
-                    
-                    const oscillator = this.audioContext.createOscillator();
-                    const gainNode = this.audioContext.createGain();
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(this.audioContext.destination);
-                    
-                    oscillator.type = 'sine';
-                    oscillator.frequency.value = frequency;
-                    gainNode.gain.value = volume; // Higher volume
-                    
-                    const now = this.audioContext.currentTime;
-                    oscillator.start(now);
-                    oscillator.stop(now + duration);
-                    
-                    console.log(`Beep played: freq=${frequency}, duration=${duration}s`);
-                } catch (e) {
-                    console.error('Error playing beep:', e);
-                }
-            }
-        };
-    }
-    
-    // Load sound effects - simplified versions with higher volume
-    loadSounds() {
-        console.log('Loading sound effects');
-        try {
-            this.sounds = {
-                // Game sounds
-                key: this.generateBeep(440, 0.1, 0.7),               // A note
-                correct: this.generateBeep(523.25, 0.15, 0.7),       // C note
-                wrong: this.generateBeep(277.18, 0.2, 0.7),          // C# note (lower)
-                win: this.generateBeep(659.25, 0.3, 0.7),            // E note
-                lose: this.generateBeep(196, 0.5, 0.7),              // G note (lower)
-                
-                // UI sounds
-                click: this.generateBeep(600, 0.05, 0.7),            // D# note
-                select: this.generateBeep(700, 0.08, 0.7),           // F note
-                start: this.generateBeep(800, 0.1, 0.7),             // G note
-                back: this.generateBeep(350, 0.08, 0.7)              // F note (lower)
-            };
-            console.log('Sound effects loaded successfully');
-        } catch (e) {
-            console.error('Error loading sounds:', e);
-        }
-    }
-    
-    // Get a sound by name
-    getSound(soundName) {
-        if (!this.sounds[soundName]) {
-            console.warn(`Sound not found: ${soundName}`);
-            return null;
-        }
-        return this.sounds[soundName];
-    }
-    
-    // Play a sound with error handling
-    play(soundName) {
-        if (!this.enabled) {
-            console.log('Sound effects disabled');
-            return;
-        }
-        
-        // Create context if it doesn't exist
-        if (!this.audioContext) {
-            try {
-                this.initAudioContext();
-            } catch (e) {
-                console.error('Failed to create audio context:', e);
-                return;
-            }
-        }
-        
-        try {
-            // Get the sound
-            const sound = this.getSound(soundName);
-            if (!sound) {
-                console.warn(`Cannot play sound "${soundName}": not found`);
-                return;
-            }
-            
-            // Resume context if suspended
-            if (this.audioContext && this.audioContext.state === 'suspended') {
-                this.audioContext.resume().then(() => {
-                    console.log('Audio context resumed');
-                    // Play the sound after context is resumed
-                    sound.play();
-                }).catch(e => {
-                    console.error('Failed to resume audio context:', e);
-                });
-            } else {
-                // Play the sound directly
-                sound.play();
-            }
-        } catch (e) {
-            console.error(`Error playing sound "${soundName}":`, e);
-        }
-    }
-    
-    // Set enabled/disabled state
-    setEnabled(enabled) {
-        this.enabled = enabled;
-        localStorage.setItem('soundEffects', enabled);
-        console.log(`Sound effects ${enabled ? 'enabled' : 'disabled'}`);
-    }
-}
 
-/**
- * Settings Class
- * Manages game settings like dark mode and sound effects
- */
-class Settings {
-    constructor() {
-        this.settings = this.loadSettings();
-    }
-    
-    loadSettings() {
-        const savedSettings = localStorage.getItem('hangman_settings');
-        return savedSettings ? JSON.parse(savedSettings) : {
-            darkMode: true,
-            soundEffects: true
-        };
-    }
-    
-    saveSettings() {
-        localStorage.setItem('hangman_settings', JSON.stringify(this.settings));
-    }
-    
-    getSetting(key) {
-        return this.settings[key];
-    }
-    
-    updateSetting(key, value) {
-        this.settings[key] = value;
-        this.saveSettings();
-    }
-}
-
-/**
- * Hangman Drawing Class
- * Handles drawing the hangman in SVG
- */
-class Hangman {
-    constructor(svgElement) {
-        this.svg = svgElement;
-        this.parts = [
-            this.drawGallows.bind(this),     // 0: Gallows
-            this.drawHead.bind(this),        // 1: Head
-            this.drawBody.bind(this),        // 2: Body
-            this.drawLeftArm.bind(this),     // 3: Left arm
-            this.drawRightArm.bind(this),    // 4: Right arm
-            this.drawLeftLeg.bind(this),     // 5: Left leg
-            this.drawRightLeg.bind(this)     // 6: Right leg
-        ];
-    }
-    
-    clear() {
-        // Clear the SVG element
-        while (this.svg.firstChild) {
-            this.svg.removeChild(this.svg.firstChild);
-        }
-    }
-    
-    drawPart(partIndex) {
-        if (partIndex >= 0 && partIndex < this.parts.length) {
-            this.parts[partIndex]();
-        }
-    }
-    
-    // Draw the gallows
-    drawGallows() {
-        // Base
-        this.createLine(20, 230, 180, 230);
-        // Vertical pole
-        this.createLine(60, 230, 60, 30);
-        // Horizontal beam
-        this.createLine(60, 30, 140, 30);
-        // Support beam
-        this.createLine(60, 60, 100, 30);
-        // Rope
-        this.createLine(140, 30, 140, 50);
-    }
-    
-    // Draw the head
-    drawHead() {
-        const head = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        head.setAttribute('cx', '140');
-        head.setAttribute('cy', '70');
-        head.setAttribute('r', '20');
-        head.setAttribute('stroke', 'currentColor');
-        head.setAttribute('stroke-width', '2');
-        head.setAttribute('fill', 'none');
-        this.svg.appendChild(head);
-    }
-    
-    // Draw the body
-    drawBody() {
-        this.createLine(140, 90, 140, 150);
-    }
-    
-    // Draw the left arm
-    drawLeftArm() {
-        this.createLine(140, 100, 110, 130);
-    }
-    
-    // Draw the right arm
-    drawRightArm() {
-        this.createLine(140, 100, 170, 130);
-    }
-    
-    // Draw the left leg
-    drawLeftLeg() {
-        this.createLine(140, 150, 110, 190);
-    }
-    
-    // Draw the right leg
-    drawRightLeg() {
-        this.createLine(140, 150, 170, 190);
-    }
-    
-    // Helper method to create a line
-    createLine(x1, y1, x2, y2) {
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', x1);
-        line.setAttribute('y1', y1);
-        line.setAttribute('x2', x2);
-        line.setAttribute('y2', y2);
-        line.setAttribute('stroke', 'currentColor');
-        line.setAttribute('stroke-width', '2');
-        this.svg.appendChild(line);
-    }
-}
-
-/**
- * Statistics Class
- * Tracks and displays game statistics
- */
-class Statistics {
-    constructor() {
-        console.log('Initializing Statistics');
-        this.stats = this.loadStats();
-        
-        // Ensure all required fields exist
-        this.ensureStatsFields();
-        
-        console.log('Statistics initialized with:', this.stats);
-    }
-    
-    /**
-     * Ensure all stats fields exist with valid values
-     */
-    ensureStatsFields() {
-        const defaultStats = {
-            gamesPlayed: 0,
-            gamesWon: 0,
-            currentStreak: 0,
-            maxStreak: 0,
-            bestTime: null,
-            totalTime: 0
-        };
-        
-        // Add any missing fields from default stats
-        for (const [key, value] of Object.entries(defaultStats)) {
-            if (this.stats[key] === undefined) {
-                console.log(`Adding missing stat field: ${key}`);
-                this.stats[key] = value;
-            }
-        }
-    }
-    
-    loadStats() {
-        try {
-            const savedStats = localStorage.getItem('hangman_stats');
-            if (savedStats) {
-                const parsedStats = JSON.parse(savedStats);
-                console.log('Loaded saved stats:', parsedStats);
-                return parsedStats;
-            }
-        } catch (error) {
-            console.error('Error loading stats:', error);
-        }
-        
-        // Return default stats if nothing loaded
-        console.log('Creating default stats');
-        return {
-            gamesPlayed: 0,
-            gamesWon: 0,
-            currentStreak: 0,
-            maxStreak: 0,
-            bestTime: null,
-            totalTime: 0
-        };
-    }
-    
-    saveStats() {
-        try {
-            localStorage.setItem('hangman_stats', JSON.stringify(this.stats));
-            console.log('Stats saved successfully');
-        } catch (error) {
-            console.error('Error saving stats:', error);
-        }
-    }
-    
-    /**
-     * Reset all statistics
-     */
-    resetStats() {
-        this.stats = {
-            gamesPlayed: 0,
-            gamesWon: 0,
-            currentStreak: 0,
-            maxStreak: 0,
-            bestTime: null,
-            totalTime: 0
-        };
-        this.saveStats();
-        this.updateDisplay();
-        console.log('Statistics reset');
-    }
-
-    updateStats(won, timeElapsed) {
-        console.log(`Updating stats: won=${won}, timeElapsed=${timeElapsed}ms`);
-        
-        // Ensure timeElapsed is a number
-        timeElapsed = Number(timeElapsed);
-        
-        // Update game counts
-        this.stats.gamesPlayed++;
-        
-        if (won) {
-            // Update win statistics
-            this.stats.gamesWon++;
-            this.stats.currentStreak++;
-            
-            // Update max streak if needed
-            if (this.stats.currentStreak > this.stats.maxStreak) {
-                this.stats.maxStreak = this.stats.currentStreak;
-            }
-            
-            // Only track time for wins
-            if (!isNaN(timeElapsed) && timeElapsed > 0) {
-                // Convert to seconds for storage
-                const timeInSeconds = Math.floor(timeElapsed / 1000);
-                console.log(`Recording time: ${timeInSeconds} seconds`);
-                
-                // Track best time
-                if (!this.stats.bestTime || timeInSeconds < this.stats.bestTime) {
-                    this.stats.bestTime = timeInSeconds;
-                }
-                
-                // Add to total time
-                this.stats.totalTime += timeInSeconds;
-            }
-        } else {
-            // Reset streak on loss
-            this.stats.currentStreak = 0;
-        }
-        
-        // Save and display updated stats
-        this.saveStats();
-        this.updateDisplay();
-        
-        console.log('Stats updated:', this.stats);
-    }
-    
-    /**
-     * Update the stats display in the UI
-     */
-    updateDisplay() {
-        console.log('Updating stats display');
-        
-        try {
-            // Ensure all stats fields exist
-            this.ensureStatsFields();
-            
-            // Calculate win percentage
-            const winPercentage = this.stats.gamesPlayed > 0 
-                ? Math.round((this.stats.gamesWon / this.stats.gamesPlayed) * 100) 
-                : 0;
-            
-            // Calculate average time in seconds
-            const avgTime = this.stats.gamesWon > 0 
-                ? Math.round(this.stats.totalTime / this.stats.gamesWon) 
-                : 0;
-            
-            console.log(`Win percentage: ${winPercentage}%, Average time: ${avgTime}s`);
-            
-            // Update stats in the modal - manually set each element to ensure proper updates
-            const gamesPlayedElement = document.getElementById('gamesPlayed');
-            if (gamesPlayedElement) gamesPlayedElement.textContent = this.stats.gamesPlayed;
-            
-            const gamesWonElement = document.getElementById('gamesWon');
-            if (gamesWonElement) gamesWonElement.textContent = this.stats.gamesWon;
-            
-            const winPercentageElement = document.getElementById('winPercentage');
-            if (winPercentageElement) winPercentageElement.textContent = `${winPercentage}%`;
-            
-            const currentStreakElement = document.getElementById('currentStreak');
-            if (currentStreakElement) currentStreakElement.textContent = this.stats.currentStreak;
-            
-            const maxStreakElement = document.getElementById('maxStreak');
-            if (maxStreakElement) maxStreakElement.textContent = this.stats.maxStreak;
-            
-            // Update average time with proper formatting
-            const avgTimeElement = document.getElementById('averageTime');
-            if (avgTimeElement) {
-                if (avgTime > 0) {
-                    avgTimeElement.textContent = this.formatTime(avgTime * 1000);
-                } else {
-                    avgTimeElement.textContent = '--:--';
-                }
-            }
-        } catch (error) {
-            console.error('Error updating stats display:', error);
-        }
-    }
-    
-    // Format time as mm:ss
-    formatTime(timeMs) {
-        try {
-            const totalSeconds = Math.floor(timeMs / 1000);
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-            
-            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        } catch (error) {
-            console.error('Error formatting time:', error);
-            return '--:--';
-        }
-    }
-}
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Create the game and initialize
+    const game = new HangmanGame();
+    game.initialize();
+});
 
 /**
  * Main Game Class
- * Manages game states and interactions
+ * Controls the game flow and state
  */
-class Game {
-    constructor(soundManager, settingsManager, statsManager) {
-        console.log('Game constructor called');
-        
-        // Store dependencies
-        this.sounds = soundManager || new SoundManager();
-        this.settings = settingsManager || new Settings();
-        this.statistics = statsManager || new Statistics();
+class HangmanGame {
+    constructor() {
+        // Initialize core components
+        this.soundManager = new SoundManager();
+        this.settingsManager = new Settings();
+        this.statisticsManager = new Statistics();
         
         // Game state
         this.currentWord = '';
-        this.currentCategory = null;
+        this.currentCategory = '';
+        this.gameMode = '';
         this.guessedLetters = new Set();
         this.remainingAttempts = 6;
-        this.gameMode = '';
-        this.timerInterval = null;
-        this.startTime = 0;
-        this.handleKeyDown = null;
+        this.gameActive = false;
         
-        try {
-            // Validate essential UI elements
-            console.log('Validating UI elements...');
-            
-            // Game screens
-            this.homeScreen = document.getElementById('home-screen');
-            this.categorySelection = document.getElementById('category-selection');
-            this.gameArea = document.getElementById('game-area');
-            
-            if (!this.homeScreen) {
-                throw new Error('Home screen element not found');
-            }
-            
-            if (!this.categorySelection) {
-                throw new Error('Category selection element not found');
-            }
-            
-            if (!this.gameArea) {
-                throw new Error('Game area element not found');
-            }
-            
-            // Game elements - using querySelector for class elements
-            this.wordDisplay = document.querySelector('.word-display');
-            this.messageDisplay = document.querySelector('.message');
-            this.timerDisplay = document.querySelector('.timer');
-            
-            if (!this.wordDisplay) {
-                throw new Error('Word display element not found');
-            }
-            
-            if (!this.messageDisplay) {
-                throw new Error('Message display element not found');
-            }
-            
-            if (!this.timerDisplay) {
-                throw new Error('Timer display element not found');
-            }
-            
-            // Hangman SVG
-            const hangmanSvg = document.querySelector('.hangman-svg');
-            if (hangmanSvg) {
-                this.hangman = new Hangman(hangmanSvg);
-            } else {
-                throw new Error('Hangman SVG element not found');
-            }
-            
-            console.log('All UI elements found and validated');
-        } catch (error) {
-            console.error('Error validating UI elements:', error);
-            throw new Error('Failed to initialize game: ' + error.message);
+        // UI Elements - cached for performance
+        this.wordDisplay = document.querySelector('.word-display');
+        this.messageElement = document.querySelector('.message');
+        this.timerElement = document.querySelector('.timer');
+        
+        // Create the hangman drawer
+        const hangmanSvg = document.getElementById('hangman-svg');
+        if (hangmanSvg) {
+            this.hangman = new HangmanDrawer(hangmanSvg);
+            console.log('Hangman SVG element found by ID');
+        } else {
+            console.error('Hangman SVG element not found by ID');
         }
-        
-        // Initialize the game
-        this.initialize();
     }
     
     /**
-     * Initialize the game components
+     * Initialize the game and set up all event listeners
      */
     initialize() {
-        console.log('Initializing game components...');
+        console.log('Initializing game...');
         
-        try {
-            // Apply dark mode based on settings
-            this.applyDarkMode();
-            
-            // Setup event listeners
-            this.setupButtonListeners();
-            this.setupSettingsListeners();
-            
-            // Show home screen
-            this.showScreen('home-screen');
-            
-            console.log('Game initialized successfully');
-        } catch (error) {
-            console.error('Error during game initialization:', error);
-            alert('Սխալ տեղի ունեցաւ խաղը բացելու ընթացքին:');
-        }
+        // Apply settings from local storage
+        this.applySettings();
+        
+        // Set up all event handlers
+        this.setupEventListeners();
+        
+        // Show the home screen initially
+        this.showScreen('home-screen');
+        
+        console.log('Game initialized successfully');
     }
     
     /**
-     * Apply dark mode based on current setting
+     * Apply saved settings
      */
-    applyDarkMode() {
-        const darkModeEnabled = this.settings.getSetting('darkMode');
-        console.log('Applying dark mode:', darkModeEnabled);
-        document.documentElement.setAttribute('data-theme', darkModeEnabled ? 'dark' : 'light');
-    }
-    
-    /**
-     * Set up settings listeners for sound effects and dark mode checkboxes
-     */
-    setupSettingsListeners() {
-        console.log('Setting up settings listeners');
-        
-        // Set up sound checkbox
-        const soundCheckbox = document.getElementById('soundEffects');
-        if (soundCheckbox) {
-            // Set initial state
-            soundCheckbox.checked = this.settings.getSetting('soundEffects') !== false;
-            
-            soundCheckbox.addEventListener('change', () => {
-                // Update settings
-                this.settings.updateSetting('soundEffects', soundCheckbox.checked);
-                
-                // Update sound manager
-                if (this.sounds) {
-                    this.sounds.setEnabled(soundCheckbox.checked);
-                }
-                
-                console.log(`Sound effects ${soundCheckbox.checked ? 'enabled' : 'disabled'}`);
-            });
-        } else {
-            console.warn('Sound checkbox not found');
+    applySettings() {
+        // Apply dark mode if enabled
+        if (this.settingsManager.getSetting('darkMode')) {
+            document.body.classList.add('dark-mode');
         }
         
-        // Set up dark mode checkbox
-        const darkModeCheckbox = document.getElementById('darkMode');
-        if (darkModeCheckbox) {
-            // Set initial state
-            darkModeCheckbox.checked = this.settings.getSetting('darkMode') !== false;
-            
-            darkModeCheckbox.addEventListener('change', () => {
-                // Update settings
-                this.settings.updateSetting('darkMode', darkModeCheckbox.checked);
-                
-                // Update theme
-                this.applyDarkMode();
-                
-                // Play feedback sound
-                if (this.sounds && this.sounds.play) {
-                    this.sounds.play('click');
-                }
-                
-                console.log(`Dark mode ${darkModeCheckbox.checked ? 'enabled' : 'disabled'}`);
-            });
-        } else {
-            console.warn('Dark mode checkbox not found');
-        }
-        
-        console.log('Settings listeners initialized');
+        // Apply sound settings
+        this.soundManager.setEnabled(this.settingsManager.getSetting('soundEffects'));
     }
     
     /**
      * Set up all event listeners
      */
     setupEventListeners() {
-        console.log('Setting up event listeners');
+        // === HOME SCREEN BUTTONS ===
         
-        // Mode buttons (regular, daily challenge)
-        const modeButtons = document.querySelectorAll('.mode-btn');
-        modeButtons.forEach(btn => {
-            btn.onclick = () => {
-                const mode = btn.getAttribute('data-mode');
-                console.log('Mode button clicked:', mode);
-                this.resetGameState();
-                this.setGameMode(mode);
+        // Regular game button (shows categories)
+        const regularModeBtn = document.querySelector('.mode-btn[data-mode="regular"]');
+        if (regularModeBtn) {
+            regularModeBtn.onclick = () => {
+                this.soundManager.play('click');
+                this.showScreen('category-selection');
             };
-        });
-
-        // Category buttons
+        }
+        
+        // Daily challenge button
+        const dailyModeBtn = document.querySelector('.mode-btn[data-mode="daily"]');
+        if (dailyModeBtn) {
+            dailyModeBtn.onclick = () => {
+                this.soundManager.play('click');
+                this.startDailyChallenge();
+            };
+        }
+        
+        // === CATEGORY BUTTONS ===
+        
+        // Category selection buttons
         const categoryButtons = document.querySelectorAll('.category-btn');
         categoryButtons.forEach(btn => {
             btn.onclick = () => {
                 const category = btn.getAttribute('data-category');
-                console.log('Category button clicked:', category);
-                this.selectCategory(category);
+                if (category) {
+                    this.soundManager.play('select');
+                    this.startGame(category);
+                }
             };
         });
-
-        // Keyboard buttons
-        this.setupKeyboardEventListeners();
-
-        // Restart game button
-        const restartBtn = document.getElementById('restart-game');
-        if (restartBtn) {
-            restartBtn.onclick = () => {
-                console.log('Restart button clicked');
-                this.getNewWordAndRestart();
-            };
-        }
-
-        // Back buttons
-        const backToHomeBtn = document.getElementById('back-to-home');
-        if (backToHomeBtn) {
-            backToHomeBtn.onclick = () => {
-                console.log('Back to home button clicked');
-                this.showHomeScreen();
+        
+        // === GAME SCREEN BUTTONS ===
+        
+        // Back button (from game to home)
+        const backBtn = document.getElementById('back-from-game');
+        if (backBtn) {
+            backBtn.onclick = () => {
+                this.soundManager.play('click');
+                this.showScreen('home-screen');
             };
         }
         
-        const backFromGameBtn = document.getElementById('back-from-game');
-        if (backFromGameBtn) {
-            backFromGameBtn.onclick = () => {
-                console.log('Back from game button clicked');
-                this.showHomeScreen();
+        // Restart button (in game)
+        const restartBtn = document.getElementById('restart-game');
+        if (restartBtn) {
+            restartBtn.onclick = () => {
+                this.soundManager.play('click');
+                this.restartGame();
             };
         }
-
-        // Settings button
-        const settingsBtn = document.getElementById('settings-btn');
-        const closeSettingsBtn = document.querySelector('#settingsModal .close');
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsBtn && settingsModal) {
-            settingsBtn.onclick = () => {
-                settingsModal.style.display = 'block';
+        
+        // Bottom restart button (new)
+        const bottomRestartBtn = document.getElementById('bottom-restart-game');
+        if (bottomRestartBtn) {
+            bottomRestartBtn.onclick = () => {
+                this.soundManager.play('click');
+                this.restartGame();
             };
-            closeSettingsBtn.onclick = () => {
-                settingsModal.style.display = 'none';
+        }
+        
+        // === HEADER BUTTONS ===
+        
+        // Settings button
+        const settingsBtn = document.querySelector('.settings-btn');
+        if (settingsBtn) {
+            settingsBtn.onclick = () => {
+                this.soundManager.play('click');
+                document.getElementById('settingsModal').style.display = 'block';
             };
         }
         
@@ -746,596 +157,260 @@ class Game {
         const statsBtn = document.querySelector('.stats-btn');
         if (statsBtn) {
             statsBtn.onclick = () => {
-                this.statistics.updateDisplay();
-                const modal = document.getElementById('statsModal');
-                if (modal) modal.style.display = 'block';
+                this.soundManager.play('click');
+                this.statisticsManager.updateDisplay();
+                document.getElementById('statsModal').style.display = 'block';
             };
         }
-
+        
         // Help button
         const helpBtn = document.querySelector('.help-btn');
         if (helpBtn) {
             helpBtn.onclick = () => {
-                const modal = document.getElementById('helpModal');
-                if (modal) modal.style.display = 'block';
+                this.soundManager.play('click');
+                document.getElementById('helpModal').style.display = 'block';
             };
         }
-
-        // Close buttons for modals
+        
+        // === MODAL HANDLING ===
+        
+        // Close buttons for all modals
         const closeButtons = document.querySelectorAll('.close');
-        closeButtons.forEach(closeBtn => {
-            closeBtn.onclick = function() {
-                const modal = this.closest('.modal');
-                if (modal) modal.style.display = 'none';
+        closeButtons.forEach(btn => {
+            btn.onclick = () => {
+                this.soundManager.play('click');
+                const modal = btn.closest('.modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
             };
         });
-
-        // Close modal when clicking outside
+        
+        // Click outside modal to close
         window.onclick = (event) => {
             if (event.target.classList.contains('modal')) {
+                this.soundManager.play('click');
                 event.target.style.display = 'none';
             }
         };
-
+        
+        // === SETTINGS CONTROLS ===
+        
         // Dark mode toggle
         const darkModeCheckbox = document.getElementById('darkMode');
         if (darkModeCheckbox) {
-            darkModeCheckbox.checked = this.settings.getSetting('darkMode');
+            darkModeCheckbox.checked = this.settingsManager.getSetting('darkMode');
+            
             darkModeCheckbox.onchange = () => {
-                this.settings.updateSetting('darkMode', darkModeCheckbox.checked);
-                this.applyDarkMode();
+                this.soundManager.play('click');
+                this.settingsManager.updateSetting('darkMode', darkModeCheckbox.checked);
+                
+                // Apply dark mode immediately
+                if (darkModeCheckbox.checked) {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
             };
         }
         
         // Sound effects toggle
         const soundEffectsCheckbox = document.getElementById('soundEffects');
         if (soundEffectsCheckbox) {
-            soundEffectsCheckbox.checked = this.settings.getSetting('soundEffects');
+            soundEffectsCheckbox.checked = this.settingsManager.getSetting('soundEffects');
+            
             soundEffectsCheckbox.onchange = () => {
-                this.settings.updateSetting('soundEffects', soundEffectsCheckbox.checked);
-                this.sounds.setEnabled(soundEffectsCheckbox.checked);
+                // Play sound before potentially disabling
+                if (soundEffectsCheckbox.checked) {
+                    this.soundManager.play('click');
+                }
+                
+                this.settingsManager.updateSetting('soundEffects', soundEffectsCheckbox.checked);
+                this.soundManager.setEnabled(soundEffectsCheckbox.checked);
             };
         }
         
-        console.log('Event listeners initialized');
+        // Reset statistics button
+        const resetStatsBtn = document.getElementById('reset-stats');
+        if (resetStatsBtn) {
+            resetStatsBtn.onclick = () => {
+                this.soundManager.play('click');
+                
+                // Confirm before resetting
+                if (confirm('Դուք վստա՞հ էք, որ կ՚ուզէք զրոյացնել ձեր վիճակագրութիւնը:')) {
+                    this.statisticsManager.resetStats();
+                }
+            };
+        }
+        
+        // === KEYBOARD HANDLING ===
+        
+        // On-screen keyboard
+        this.setupKeyboard();
+        
+        // Physical keyboard
+        document.addEventListener('keydown', (event) => {
+            if (!this.gameActive) return;
+            
+            const key = event.key.toLowerCase();
+            // Support both Latin and Armenian letters
+            if (/^[a-zաբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև]$/i.test(key)) {
+                this.soundManager.play('key');
+                this.makeGuess(key);
+            }
+        });
     }
     
     /**
-     * Set up keyboard event listeners
+     * Set up on-screen keyboard
      */
-    setupKeyboardEventListeners() {
-        console.log('Setting up keyboard event listeners');
-        
-        // Remove any existing listener to prevent duplicates
-        if (this.handleKeyDown) {
-            document.removeEventListener('keydown', this.handleKeyDown);
-        }
-        
-        // Create new keyboard handler
-        this.handleKeyDown = (event) => {
-            const key = event.key.toLowerCase();
-            
-            // Only process letter keys
-            if (/^[a-z]$/.test(key)) {
-                // Only process keypresses when in game area
-                if (this.gameArea.style.display === 'block') {
-                    console.log(`Keyboard input: ${key}`);
-                    this.sounds.play('key');
-                    this.makeGuess(key);
-                }
-            }
-        };
-        
-        // Attach the listener
-        document.addEventListener('keydown', this.handleKeyDown);
-        console.log('Keyboard event listener attached');
-        
-        // Set up on-screen keyboard
+    setupKeyboard() {
         const keyboardButtons = document.querySelectorAll('.key-btn');
-        console.log(`Found ${keyboardButtons.length} on-screen keyboard buttons`);
-        
         keyboardButtons.forEach(btn => {
-            // Clear any existing handlers to prevent duplicates
-            btn.onclick = null;
-            
-            // Add new click handler
             btn.onclick = () => {
-                const letter = btn.getAttribute('data-letter');
+                if (!this.gameActive) return;
+                
+                const letter = btn.getAttribute('data-letter') || btn.textContent.trim().toLowerCase();
                 if (letter) {
-                    console.log(`On-screen keyboard: ${letter}`);
-                    this.sounds.play('key');
+                    this.soundManager.play('key');
                     this.makeGuess(letter);
                 }
             };
         });
-        
-        console.log('Keyboard setup complete');
     }
     
     /**
-     * Reset game state completely
+     * Show a specific screen and hide others
      */
-    resetGameState() {
-        console.log('Resetting game state');
+    showScreen(screenId) {
+        // Hide all screens
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('category-selection').style.display = 'none';
+        document.getElementById('game-area').style.display = 'none';
         
-        this.currentWord = '';
-        this.currentCategory = null;
-        this.guessedLetters.clear();
-        this.remainingAttempts = 6;
+        // Show the requested screen
+        document.getElementById(screenId).style.display = 'block';
         
-        // Stop timer if running
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
-        
-        // Reset keyboard
-        document.querySelectorAll('.key-btn').forEach(btn => {
-            btn.disabled = false;
-            btn.classList.remove('correct', 'wrong');
-        });
-        
-        // Clear any messages
-        if (this.messageDisplay) {
-            this.messageDisplay.textContent = '';
-            this.messageDisplay.style.display = 'none';
-        }
-        
-        // Reset hangman if initialized
-        if (this.hangman) {
-            this.hangman.clear();
-            this.hangman.drawPart(0); // Draw the gallows
-        }
-        
-        // Clear word display
-        if (this.wordDisplay) {
-            this.wordDisplay.innerHTML = '';
-        }
-        
-        // Reset restart button visibility
-        const restartBtn = document.getElementById('restart-game');
-        if (restartBtn) {
-            restartBtn.style.display = 'none';
+        // Reset game state when leaving game screen
+        if (screenId !== 'game-area') {
+            this.gameActive = false;
         }
     }
     
     /**
-     * Show home screen and hide other screens
+     * Start a game with the selected category
      */
-    showHomeScreen() {
-        console.log('Showing home screen');
+    startGame(category) {
+        console.log('Starting game with category:', category);
         
-        // Reset game state completely before switching screens
-        this.resetGameState();
-        
-        // Show home screen, hide others
-        this.showScreen('home-screen');
-    }
-    
-    /**
-     * Get a new word and restart the game
-     */
-    getNewWordAndRestart() {
-        console.log('Getting new word and restarting game');
-        
-        // Reset game state first
-        this.resetGameState();
-        
-        // Get a new word based on the current mode and category
-        if (this.gameMode === 'regular') {
-            this.currentWord = getRandomWord(this.currentCategory || null);
-            console.log('New word for regular mode:', this.currentWord);
-            
-            // Show restart button for regular mode
-            const restartBtn = document.getElementById('restart-game');
-            if (restartBtn) {
-                restartBtn.style.display = 'block';
-            }
-        } else if (this.gameMode === 'daily') {
-            this.currentWord = getDailyWord();
-            console.log('Daily challenge word:', this.currentWord);
-            
-            // Hide restart button for daily challenge
-            const restartBtn = document.getElementById('restart-game');
-            if (restartBtn) {
-                restartBtn.style.display = 'none';
-            }
-        }
-        
-        // Ensure we have a valid word
-        if (!this.currentWord || this.currentWord.length === 0) {
-            console.error('Failed to get a valid word. Getting a fallback word.');
-            // Fallback to any random word if no word was returned
-            this.currentWord = getRandomWord(null);
-        }
-        
-        // Start the game with the new word
-        this.startNewGame();
-    }
-
-    /**
-     * Set the game mode (regular or daily)
-     */
-    setGameMode(mode) {
-        console.log('Setting game mode to:', mode);
-        
-        // Reset game state first
-        this.resetGameState();
-        
-        this.gameMode = mode;
-        
-        // Play selection sound
-        this.sounds.play('select');
-        
-        // Hide all screens first
-        this.showScreen('home-screen');
-        
-        if (mode === 'regular') {
-            // For regular mode, show category selection
-            this.showScreen('category-selection');
-            
-            // Show back button for category selection
-            const backBtn = document.getElementById('back-to-home');
-            if (backBtn) backBtn.style.display = 'block';
-        } else if (mode === 'daily') {
-            // For daily challenge, check if it was already played today
-            if (hasDailyChallengeBeenPlayed()) {
-                console.log('Daily challenge already played today');
-                alert('Դուք արդէն խաղացել էք այսօրուայ մարտահրաւէրը։ Վաղը նոր խաղ կը սկսի։');
-                return;
-            }
-            
-            // Mark the daily challenge as played
-            markDailyChallengeAsPlayed();
-            
-            // Start a new game with the daily word
-            this.showGameAreaForDailyChallenge();
-        }
-    }
-
-    /**
-     * Select a category and start a game
-     */
-    selectCategory(category) {
-        console.log('Selecting category:', category);
+        // Set game settings
         this.currentCategory = category;
+        this.gameMode = 'regular';
         
-        // Play selection sound
-        this.sounds.play('select');
-        
-        // Hide category selection
-        this.showScreen('game-area');
-        
-        // Get a random word from the category, ensuring it's NOT the daily word
+        // Get a random word from the selected category
         this.currentWord = getRandomWord(category);
-        console.log('Selected random word from category:', this.currentWord);
         
-        // Ensure we have a valid word
-        if (!this.currentWord || this.currentWord.length === 0) {
-            console.error('Failed to get a valid word from category. Getting a fallback word.');
-            // Fallback to any random word if no word was returned
-            this.currentWord = getRandomWord(null);
+        // Make sure we have a valid word
+        if (!this.currentWord) {
+            console.error('Failed to get word for category:', category);
+            this.currentWord = getRandomWord(); // Fallback to any word
         }
         
-        // Start a new game with the word
-        this.startNewGame();
-    }
-
-    /**
-     * Show a new game with the daily challenge word
-     */
-    showGameAreaForDailyChallenge() {
-        // Hide other screens
+        // Show the game area
         this.showScreen('game-area');
+        
+        // Initialize the new game
+        this.startNewRound();
+    }
+    
+    /**
+     * Start the daily challenge mode
+     */
+    startDailyChallenge() {
+        // Check if already played today
+        if (hasDailyChallengeBeenPlayed()) {
+            alert('You have already played today\'s challenge!');
+            return;
+        }
+        
+        // Set game mode and mark as played
+        this.gameMode = 'daily';
+        markDailyChallengeAsPlayed();
         
         // Get the daily word
         this.currentWord = getDailyWord();
-        console.log('Daily word:', this.currentWord);
         
-        // Hide restart button for daily mode
-        const restartBtn = document.getElementById('restart-game');
-        if (restartBtn) {
-            restartBtn.style.display = 'none';
+        // Make sure we have a valid word
+        if (!this.currentWord) {
+            console.error('Failed to get daily word');
+            this.currentWord = getRandomWord(); // Fallback to any word
         }
         
-        // Start the game with the daily word
-        this.startNewGame();
+        // Show the game area
+        this.showScreen('game-area');
+        
+        // Initialize the new game
+        this.startNewRound();
     }
-
+    
     /**
-     * Start a new game with the current word
+     * Restart the game with a new word from the same category
      */
-    startNewGame() {
-        console.log('Starting new game with word:', this.currentWord);
+    restartGame() {
+        // Get a new word from the same category
+        this.currentWord = getRandomWord(this.currentCategory);
+        
+        // Initialize the new game
+        this.startNewRound();
+    }
+    
+    /**
+     * Start a new round with the current word
+     */
+    startNewRound() {
+        // Reset game state
+        this.resetGameState();
+        
+        // Update word display with blanks
+        this.updateWordDisplay();
+        
+        // No welcome message to avoid confusion
         
         // Play start sound
-        this.sounds.play('start');
+        this.soundManager.play('start');
         
+        // Set game as active
+        this.gameActive = true;
+    }
+    
+    /**
+     * Reset the game state for a new round
+     */
+    resetGameState() {
         // Reset guesses and attempts
         this.guessedLetters = new Set();
         this.remainingAttempts = 6;
         
-        // Stop timer if running
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
+        // Reset UI
+        if (this.messageElement) {
+            this.messageElement.textContent = '';
+            this.messageElement.className = 'message';
+        }
+        
+        // Reset hangman drawing
+        if (this.hangman) {
+            this.hangman.clear();
+            this.hangman.drawGallows();
+            console.log('Hangman gallows drawn');
+        } else {
+            console.error('Hangman drawer not initialized');
         }
         
         // Reset keyboard
         document.querySelectorAll('.key-btn').forEach(btn => {
-            btn.disabled = false;
             btn.classList.remove('correct', 'wrong');
-        });
-        
-        // Clear the hangman and draw the gallows
-        if (this.hangman) {
-            this.hangman.clear();
-            this.hangman.drawPart(0); // Draw the gallows at the start of the game
-        }
-        
-        // Clear the message
-        if (this.messageDisplay) {
-            this.messageDisplay.textContent = '';
-            this.messageDisplay.style.display = 'none';
-        }
-        
-        // Update the display
-        this.updateDisplay();
-        
-        // Reset and start the timer
-        this.startTime = Date.now();
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-        }
-        this.updateTimer();
-        this.timerInterval = setInterval(() => this.updateTimer(), 1000);
-        
-        // Set up the keyboard
-        this.setupKeyboardEventListeners();
-    }
-
-    /**
-     * Display a specific screen and hide others
-     */
-    showScreen(screenId) {
-        console.log(`Showing screen: ${screenId}`);
-        
-        // List of all screens
-        const screens = ['home-screen', 'category-selection', 'game-area'];
-        
-        // Hide all screens first
-        screens.forEach(id => {
-            const screen = document.getElementById(id);
-            if (screen) {
-                screen.style.display = 'none';
-            } else {
-                console.error(`Screen element not found: ${id}`);
-            }
-        });
-        
-        // Show the requested screen
-        const targetScreen = document.getElementById(screenId);
-        if (targetScreen) {
-            targetScreen.style.display = 'block';
-            console.log(`Screen ${screenId} is now visible`);
-        } else {
-            console.error(`Target screen not found: ${screenId}`);
-        }
-    }
-
-    /**
-     * Get a new word and restart the game (for restart button)
-     */
-    getNewWordAndRestart() {
-        console.log('Getting new word and restarting game');
-        
-        // Reset game state first
-        this.resetGameState();
-        
-        // Get a new word
-        this.currentWord = getRandomWord(this.currentCategory);
-        console.log('New word:', this.currentWord);
-        
-        // Start a new game with the word
-        this.startNewGame();
-    }
-
-    /**
-     * Start a new game with the selected mode and category
-     */
-    startGame(mode, category = null) {
-        console.log(`Starting game: mode=${mode}, category=${category}`);
-        this.gameMode = mode;
-        
-        // Clear previous game state
-        this.resetGame();
-        
-        try {
-            // Handle daily challenge
-            if (mode === 'daily') {
-                console.log('Starting daily challenge...');
-                
-                if (typeof hasDailyChallengeBeenPlayed !== 'function') {
-                    console.error('Daily challenge functions not available!');
-                    alert('Error loading daily challenge. Please reload the page.');
-                    this.showScreen('home-screen');
-                    return;
-                }
-                
-                // Check if daily challenge already played
-                if (hasDailyChallengeBeenPlayed()) {
-                    console.log('Daily challenge already played today');
-                    alert('Արդէն խաղացած էք այսօրուայ մարտահրաւէրը:');
-                    this.showScreen('home-screen');
-                    return;
-                }
-                
-                // Get daily challenge word
-                const todaysWord = getDailyWord();
-                if (!todaysWord) {
-                    console.error('Failed to get daily word');
-                    alert('Չյաջողուեցաւ օրուայ բառը ստանալ։');
-                    this.showScreen('home-screen');
-                    return;
-                }
-                
-                this.currentWord = todaysWord;
-                console.log('Daily challenge word selected:', this.currentWord);
-                
-                // Mark daily challenge as played
-                markDailyChallengeAsPlayed();
-                
-                // Play start sound if enabled
-                if (this.sounds && this.settings.getSetting('soundEffects') !== false) {
-                    this.sounds.play('start');
-                }
-            } else {
-                // Get random word from selected category
-                this.currentCategory = category;
-                
-                if (typeof getRandomWord !== 'function') {
-                    console.error('getRandomWord function not available');
-                    alert('Error loading word. Please reload the page.');
-                    this.showScreen('home-screen');
-                    return;
-                }
-                
-                this.currentWord = getRandomWord(category);
-                if (!this.currentWord) {
-                    console.error('Failed to get random word');
-                    alert('Չյաջողուեցաւ պատահական բառը ստանալ։');
-                    this.showScreen('home-screen');
-                    return;
-                }
-                
-                console.log(`Regular game started with category: ${category}, word: ${this.currentWord}`);
-                
-                // Play start sound if enabled
-                if (this.sounds && this.settings.getSetting('soundEffects') !== false) {
-                    this.sounds.play('start');
-                }
-            }
-            
-            // Show game area
-            this.showScreen('game-area');
-            
-            // Setup keyboard event listeners
-            this.setupKeyboardEventListeners();
-            
-            // Display blank spaces for the word
-            this.updateWordDisplay();
-            
-            // Reset message
-            if (this.messageDisplay) {
-                this.messageDisplay.textContent = '';
-                this.messageDisplay.classList.remove('win-message', 'lose-message');
-            }
-            
-            // Start timer
-            this.startTime = Date.now();
-            this.startTimer();
-            
-            console.log('Game started successfully with word:', this.currentWord);
-            
-        } catch (error) {
-            console.error('Error starting game:', error);
-            alert('Սխալ տեղի ունեցաւ խաղը սկսելու ընթացքին:');
-            this.showScreen('home-screen');
-        }
-    }
-    
-    /**
-     * Reset the game state
-     */
-    resetGame() {
-        console.log('Resetting game state');
-        
-        this.currentWord = '';
-        this.currentCategory = null;
-        this.guessedLetters.clear();
-        this.remainingAttempts = 6;
-        
-        // Clear the keyboard
-        this.resetKeyboard();
-        
-        // Clear the hangman drawing
-        if (this.hangman) {
-            this.hangman.clear();
-            this.hangman.drawPart(0); // Make sure the gallows is drawn
-        } else {
-            console.error('Hangman renderer not found');
-        }
-        
-        // Clear timer
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
-        
-        // Reset timer display
-        if (this.timerDisplay) {
-            this.timerDisplay.textContent = '00:00';
-        }
-        
-        console.log('Game state reset complete');
-    }
-    
-    /**
-     * Reset the keyboard UI
-     */
-    resetKeyboard() {
-        document.querySelectorAll('.key-btn').forEach(btn => {
             btn.disabled = false;
-            btn.classList.remove('correct', 'wrong');
         });
-    }
-    
-    /**
-     * Update the word display with correctly guessed letters
-     */
-    updateWordDisplay() {
-        if (!this.wordDisplay || !this.currentWord) return;
-        
-        const wordArray = this.currentWord.split('');
-        const displayArray = wordArray.map(letter => 
-            this.guessedLetters.has(letter.toLowerCase()) ? letter : '_'
-        );
-        
-        this.wordDisplay.textContent = displayArray.join(' ');
-        
-        // Check if all letters have been guessed
-        if (!displayArray.includes('_')) {
-            this.endGame(true);
-        }
-    }
-    
-    /**
-     * Start the game timer
-     */
-    startTimer() {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-        }
-        
-        this.timerInterval = setInterval(() => {
-            const elapsedTime = Date.now() - this.startTime;
-            const formattedTime = this.formatTime(elapsedTime);
-            
-            if (this.timerDisplay) {
-                this.timerDisplay.textContent = formattedTime;
-            }
-        }, 1000);
-    }
-    
-    /**
-     * Format time as mm:ss
-     */
-    formatTime(ms) {
-        const totalSeconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
     
     /**
@@ -1344,12 +419,10 @@ class Game {
     makeGuess(letter) {
         letter = letter.toLowerCase();
         
-        // Check if the game is active and letter hasn't been guessed
-        if (!this.currentWord || this.guessedLetters.has(letter)) {
+        // Ignore if game not active or letter already guessed
+        if (!this.gameActive || this.guessedLetters.has(letter)) {
             return;
         }
-        
-        console.log(`Player guessed: ${letter}`);
         
         // Add to guessed letters
         this.guessedLetters.add(letter);
@@ -1363,16 +436,25 @@ class Game {
         // Check if the letter is in the word
         if (this.currentWord.toLowerCase().includes(letter)) {
             // Correct guess
-            this.sounds.play('correct');
+            this.soundManager.play('correct');
             if (button) {
                 button.classList.add('correct');
             }
             
             // Update the word display
             this.updateWordDisplay();
+            
+            // Check for win
+            const allLettersGuessed = [...this.currentWord.toLowerCase()].every(
+                char => char === ' ' || this.guessedLetters.has(char)
+            );
+            
+            if (allLettersGuessed) {
+                this.endGame(true);
+            }
         } else {
             // Wrong guess
-            this.sounds.play('wrong');
+            this.soundManager.play('wrong');
             if (button) {
                 button.classList.add('wrong');
             }
@@ -1380,12 +462,10 @@ class Game {
             // Reduce attempts and update hangman
             this.remainingAttempts--;
             if (this.hangman) {
-                // Calculate the correct part to draw (6 = gallows, 1-6 = body parts)
-                // We want to draw parts 1-6 as attempts go from 5 to 0
-                this.hangman.drawPart(6 - this.remainingAttempts);
+                this.hangman.drawNextPart();
             }
             
-            // Check if game is lost
+            // Check for loss
             if (this.remainingAttempts <= 0) {
                 this.endGame(false);
             }
@@ -1393,395 +473,449 @@ class Game {
     }
     
     /**
+     * Update the word display with guessed and unguessed letters
+     */
+    updateWordDisplay() {
+        if (!this.wordDisplay || !this.currentWord) {
+            return;
+        }
+        
+        // Clear previous content
+        this.wordDisplay.innerHTML = '';
+        
+        // Create letter elements
+        this.currentWord.split('').forEach(letter => {
+            const letterElement = document.createElement('span');
+            letterElement.className = 'letter';
+            
+            // Show letter if guessed or if it's a space
+            if (this.guessedLetters.has(letter.toLowerCase()) || letter === ' ') {
+                letterElement.textContent = letter;
+            } else {
+                letterElement.textContent = '_';
+            }
+            
+            this.wordDisplay.appendChild(letterElement);
+        });
+    }
+    
+    /**
      * End the game (win or lose)
      */
     endGame(result) {
-        console.log(`Game ended: ${result ? 'win' : 'loss'}`);
+        // Game is no longer active
+        this.gameActive = false;
         
-        // Stop timer
-        clearInterval(this.timerInterval);
-        
-        // Calculate elapsed time
-        const endTime = Date.now();
-        const timeElapsedMs = endTime - this.startTime;
-        const formattedTime = this.formatTime(timeElapsedMs);
-        
-        console.log(`Game duration: ${formattedTime} (${timeElapsedMs}ms)`);
-        
-        // Update statistics with elapsed time in milliseconds
-        this.statistics.updateStats(result, timeElapsedMs);
-        
-        // Disable keyboard
+        // Disable all keyboard buttons
         document.querySelectorAll('.key-btn').forEach(btn => {
             btn.disabled = true;
         });
         
         // Play appropriate sound
-        this.sounds.play(result ? 'win' : 'lose');
+        this.soundManager.play(result ? 'win' : 'lose');
         
-        // Show full word and message
+        // Show the complete word
         if (this.wordDisplay) {
             this.wordDisplay.textContent = this.currentWord;
         }
         
-        // Display message
-        let message = result ? 'Շնորհավորում ենք, Դուք հաղթեցիք!' : 'Ցավոք, Դուք պարտվեցիք!';
-        if (this.messageDisplay) {
-            this.messageDisplay.textContent = message;
-            this.messageDisplay.classList.add(result ? 'win-message' : 'lose-message');
-            this.messageDisplay.style.display = 'block';
+        // Update the message
+        const message = result ? 'Շնորհավոր, դուք հաղթեցիք!' : 'Դուք պարտուեցաք!';
+        if (this.messageElement) {
+            this.messageElement.textContent = message;
+            this.messageElement.className = result ? 'message win' : 'message lose';
         }
         
-        // Show restart button if in regular mode
-        const restartBtn = document.getElementById('restart-game');
-        if (restartBtn) {
-            if (this.gameMode === 'regular') {
-                restartBtn.style.display = 'inline-block';
-            } else {
-                restartBtn.style.display = 'none';
-            }
-        }
+        // Update statistics
+        this.statisticsManager.updateStats(result);
         
-        // Show alert with game results
+        // Show alert with result
         setTimeout(() => {
-            alert(`${message}\nԽաղացած ժամանակ: ${formattedTime}`);
+            alert(message);
         }, 500);
     }
+}
+
+/**
+ * Sound Manager
+ * Handles all game sound effects using Web Audio API
+ */
+class SoundManager {
+    constructor() {
+        // Get enabled state from settings
+        this.enabled = localStorage.getItem('soundEffects') !== 'false';
+        
+        // Try to initialize audio context
+        this.audioContext = null;
+        this.initializeAudio();
+        
+        // Create a click handler to initialize audio (needed for browsers that require user interaction)
+        document.addEventListener('click', () => {
+            if (!this.audioContext) {
+                this.initializeAudio();
+            } else if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+        }, { once: true });
+    }
     
     /**
-     * Set up keyboard event listeners
+     * Initialize the audio context
      */
-    setupKeyboardEventListeners() {
-        console.log('Setting up keyboard event listeners');
-        
-        // Remove any existing listeners (to prevent duplicates)
-        document.removeEventListener('keydown', this.handleKeyDown);
-        
-        // Handle physical keyboard input
-        this.handleKeyDown = (event) => {
-            const key = event.key.toLowerCase();
-            
-            // Check if key is a letter
-            if (/^[a-z]$/.test(key)) {
-                this.makeGuess(key);
+    initializeAudio() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                this.audioContext = new AudioContextClass();
+                
+                // Try to resume if suspended
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
             }
+        } catch (error) {
+            console.error('Failed to initialize audio context:', error);
+        }
+    }
+    
+    /**
+     * Play a sound effect
+     */
+    play(type) {
+        if (!this.enabled || !this.audioContext) return;
+        
+        try {
+            // Make sure context is running
+            if (this.audioContext.state !== 'running') {
+                this.audioContext.resume();
+            }
+            
+            // Create oscillator and gain node
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            // Connect nodes
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            // Configure sound based on type
+            let frequency = 500;
+            let duration = 0.1;
+            let volume = 0.3;
+            
+            switch (type) {
+                case 'click':
+                    frequency = 800;
+                    duration = 0.1;
+                    volume = 0.3;
+                    break;
+                case 'select':
+                    frequency = 1000;
+                    duration = 0.15;
+                    volume = 0.3;
+                    break;
+                case 'key':
+                    frequency = 500;
+                    duration = 0.05;
+                    volume = 0.2;
+                    break;
+                case 'correct':
+                    frequency = 1200;
+                    duration = 0.2;
+                    volume = 0.3;
+                    break;
+                case 'wrong':
+                    frequency = 300;
+                    duration = 0.2;
+                    volume = 0.3;
+                    break;
+                case 'win':
+                    frequency = 800;
+                    duration = 0.5;
+                    volume = 0.4;
+                    break;
+                case 'lose':
+                    frequency = 200;
+                    duration = 0.5;
+                    volume = 0.4;
+                    break;
+                case 'start':
+                    frequency = 700;
+                    duration = 0.3;
+                    volume = 0.3;
+                    break;
+            }
+            
+            // Set oscillator properties
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
+            gainNode.gain.value = volume;
+            
+            // Play the sound
+            const now = this.audioContext.currentTime;
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+        } catch (error) {
+            console.error('Error playing sound:', error);
+        }
+    }
+    
+    /**
+     * Set whether sounds are enabled
+     */
+    setEnabled(enabled) {
+        this.enabled = enabled;
+    }
+}
+
+/**
+ * Settings Manager
+ * Handles saving and loading game settings
+ */
+class Settings {
+    constructor() {
+        // Load settings from local storage
+        const savedSettings = localStorage.getItem('gameSettings');
+        
+        // Use default settings if none found
+        this.settings = savedSettings ? JSON.parse(savedSettings) : {
+            darkMode: false,
+            soundEffects: true
+        };
+    }
+    
+    /**
+     * Get a setting value
+     */
+    getSetting(key) {
+        return this.settings[key];
+    }
+    
+    /**
+     * Update a setting
+     */
+    updateSetting(key, value) {
+        this.settings[key] = value;
+        localStorage.setItem('gameSettings', JSON.stringify(this.settings));
+    }
+}
+
+/**
+ * Statistics Manager
+ * Handles tracking and displaying game statistics
+ */
+class Statistics {
+    constructor() {
+        // Try to load saved stats
+        const savedStats = localStorage.getItem('gameStats');
+        
+        // Use default stats if none found
+        this.stats = savedStats ? JSON.parse(savedStats) : {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            currentStreak: 0,
+            maxStreak: 0
+        };
+    }
+    
+    /**
+     * Update stats at the end of a game
+     */
+    updateStats(won) {
+        // Update stats based on game result
+        this.stats.gamesPlayed++;
+        
+        if (won) {
+            this.stats.gamesWon++;
+            this.stats.currentStreak++;
+            
+            // Update max streak if needed
+            if (this.stats.currentStreak > this.stats.maxStreak) {
+                this.stats.maxStreak = this.stats.currentStreak;
+            }
+        } else {
+            this.stats.currentStreak = 0;
+        }
+        
+        // Save stats to local storage
+        localStorage.setItem('gameStats', JSON.stringify(this.stats));
+        
+        // Update the display
+        this.updateDisplay();
+    }
+    
+    /**
+     * Update the stats display
+     */
+    updateDisplay() {
+        // Calculate win percentage
+        const winPercentage = this.stats.gamesPlayed > 0 
+            ? Math.round((this.stats.gamesWon / this.stats.gamesPlayed) * 100) 
+            : 0;
+        
+        // Update UI elements
+        this.updateElement('gamesPlayed', this.stats.gamesPlayed);
+        this.updateElement('gamesWon', this.stats.gamesWon);
+        this.updateElement('winPercentage', `${winPercentage}%`);
+        this.updateElement('currentStreak', this.stats.currentStreak);
+        this.updateElement('maxStreak', this.stats.maxStreak);
+    }
+    
+    /**
+     * Helper method to update an element's text content
+     */
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    }
+    
+    /**
+     * Reset statistics
+     */
+    resetStats() {
+        this.stats = {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            currentStreak: 0,
+            maxStreak: 0
         };
         
-        // Add the event listener
-        document.addEventListener('keydown', this.handleKeyDown);
-        console.log('Keyboard event listener attached');
+        // Save stats to local storage
+        localStorage.setItem('gameStats', JSON.stringify(this.stats));
         
-        // Add click handlers for on-screen keyboard
-        document.querySelectorAll('.key-btn').forEach(btn => {
-            // Clear previous listeners
-            btn.onclick = null;
-            
-            // Add new listener
-            btn.onclick = () => {
-                const letter = btn.getAttribute('data-letter');
-                if (letter) {
-                    this.makeGuess(letter);
-                }
-            };
-        });
-        
-        console.log('Keyboard setup complete');
-    }
-    
-    /**
-     * Initialize the game
-     */
-    initialize() {
-        console.log('Initializing game components...');
-        
-        // Apply dark mode based on settings
-        this.applyDarkMode();
-        
-        // Setup event listeners
-        this.setupButtonListeners();
-        this.setupSettingsListeners();
-        
-        // Show home screen
-        this.showScreen('home-screen');
-        
-        console.log('Game initialization complete');
-    }
-    
-    /**
-     * Set up button listeners for menu and UI interactions
-     */
-    setupButtonListeners() {
-        console.log('Setting up button listeners');
-        
-        // Play button - shows category selection
-        const playBtn = document.querySelector('.mode-btn[data-mode="regular"]');
-        if (playBtn) {
-            playBtn.addEventListener('click', () => {
-                this.sounds.play('click');
-                this.showScreen('category-selection');
-            });
-        } else {
-            console.error('Regular mode button not found');
-        }
-        
-        // Back buttons
-        document.querySelectorAll('.back-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.sounds.play('back');
-                this.showScreen('home-screen');
-            });
-        });
-        
-        // Category buttons
-        document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const category = btn.getAttribute('data-category');
-                if (category) {
-                    this.sounds.play('select');
-                    this.startGame('regular', category);
-                }
-            });
-        });
-        
-        // Daily challenge button
-        const dailyBtn = document.querySelector('.mode-btn[data-mode="daily"]');
-        if (dailyBtn) {
-            dailyBtn.addEventListener('click', () => {
-                this.sounds.play('click');
-                this.startGame('daily');
-            });
-        } else {
-            console.error('Daily challenge button not found');
-        }
-        
-        // Settings button
-        const settingsBtn = document.querySelector('.settings-btn');
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsBtn && settingsModal) {
-            settingsBtn.addEventListener('click', () => {
-                this.sounds.play('click');
-                settingsModal.style.display = 'block';
-            });
-        }
-        
-        // Close settings
-        const closeSettings = document.querySelector('#settingsModal .close');
-        if (closeSettings && settingsModal) {
-            closeSettings.addEventListener('click', () => {
-                this.sounds.play('back');
-                settingsModal.style.display = 'none';
-            });
-        }
-        
-        // Stats button
-        const statsBtn = document.querySelector('.stats-btn');
-        const statsModal = document.getElementById('statsModal');
-        if (statsBtn && statsModal) {
-            statsBtn.addEventListener('click', () => {
-                this.sounds.play('click');
-                this.statistics.updateDisplay();
-                statsModal.style.display = 'block';
-            });
-        }
-        
-        // Close stats
-        const closeStats = document.querySelector('#statsModal .close');
-        if (closeStats && statsModal) {
-            closeStats.addEventListener('click', () => {
-                this.sounds.play('back');
-                statsModal.style.display = 'none';
-            });
-        }
-        
-        // Help button
-        const helpBtn = document.querySelector('.help-btn');
-        const helpModal = document.getElementById('helpModal');
-        if (helpBtn && helpModal) {
-            helpBtn.addEventListener('click', () => {
-                this.sounds.play('click');
-                helpModal.style.display = 'block';
-            });
-        }
-        
-        // Close help
-        const closeHelp = document.querySelector('#helpModal .close');
-        if (closeHelp && helpModal) {
-            closeHelp.addEventListener('click', () => {
-                this.sounds.play('back');
-                helpModal.style.display = 'none';
-            });
-        }
-        
-        // Restart button
-        const restartBtn = document.getElementById('restart-game');
-        if (restartBtn) {
-            restartBtn.addEventListener('click', () => {
-                this.sounds.play('click');
-                this.resetGame();
-                this.showScreen('category-selection');
-            });
-        }
-        
-        // Play button on home screen
-        const playButton = document.querySelector('.mode-btn[data-mode="regular"]');
-        if (playButton) {
-            playButton.addEventListener('click', () => {
-                this.sounds.play('click');
-                this.showScreen('category-selection');
-            });
-        }
-        
-        console.log('Button listeners initialized');
+        // Update the display
+        this.updateDisplay();
     }
 }
 
-// Initialize the game when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded - initializing Hangman game');
-    
-    try {
-        console.log('Step 1: Creating SoundManager');
-        const soundManager = new SoundManager();
-        
-        console.log('Step 2: Creating Settings');
-        const settingsManager = new Settings();
-        
-        console.log('Step 3: Creating Statistics');
-        const statsManager = new Statistics();
-        
-        console.log('Step 4: Creating Game instance');
-        const game = new Game(soundManager, settingsManager, statsManager);
-        
-        console.log('Step 5: Storing game instance globally');
-        window.gameInstance = game;
-        
-        console.log('Step 6: Setting up audio resumption');
-        // Resume audio on first user interaction
-        document.addEventListener('click', function resumeAudio() {
-            console.log('User interaction detected - attempting to resume audio context');
-            if (soundManager.audioContext && soundManager.audioContext.state === 'suspended') {
-                soundManager.audioContext.resume();
-                console.log('Audio context resumed by user interaction');
-            }
-            document.removeEventListener('click', resumeAudio);
-        }, { once: true });
-        
-        console.log('Game initialization complete');
-    } catch (error) {
-        console.error('DETAILED ERROR:', error);
-        console.error('ERROR MESSAGE:', error.message);
-        console.error('ERROR STACK:', error.stack);
-        console.dir(error);  // Log the entire error object
-        alert('Error initializing game: ' + error.message + '. Check console for details.');
+/**
+ * Hangman Drawer
+ * Handles drawing the hangman SVG
+ */
+class HangmanDrawer {
+    constructor(svgElement) {
+        this.svg = svgElement;
+        this.currentPart = 0;
+        this.strokeColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || '#000000';
+        this.strokeWidth = 3;
+        console.log('HangmanDrawer initialized with SVG element:', svgElement);
     }
-});
-
-// Add global error handler to catch any uncaught errors
-window.onerror = function(message, source, lineno, colno, error) {
-    console.error('GLOBAL ERROR CAUGHT:');
-    console.error('Message:', message);
-    console.error('Source:', source);
-    console.error('Line:', lineno);
-    console.error('Column:', colno);
-    console.error('Error object:', error);
     
-    // Alert user with a friendlier message
-    alert('An error occurred while running the game. Please check the console for details.');
-    
-    return true; // Prevents the default browser error handler
-};
-
-// Add element validation function
-function validateElement(id, name) {
-    const element = document.getElementById(id);
-    if (!element) {
-        console.error(`CRITICAL ERROR: ${name} element (${id}) not found`);
-        throw new Error(`${name} element not found`);
-    }
-    return element;
-}
-
-// Event Listeners for UI elements
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded');
-    
-    // Initialize UI components
-    setupModals();
-    setupButtons();
-    
-    // Update statistics display
-    const statistics = new Statistics();
-    statistics.updateDisplay();
-    
-    // Initialize the game
-    const game = new Game();
-    window.gameInstance = game;
-    
-    // Find current theme in localStorage and apply it
-    if (localStorage.getItem('theme')) {
-        game.settings.theme = localStorage.getItem('theme');
-    }
-    game.applyDarkMode();
-});
-
-function setupButtons() {
-    // Setup all button click events
-    
-    // Game control buttons
-    document.getElementById('start-game-btn').addEventListener('click', function() {
-        window.gameInstance.showCategorySelectModal();
-        window.gameInstance.sounds.play('click');
-    });
-    
-    document.getElementById('restart-game').addEventListener('click', function() {
-        window.gameInstance.restartGame();
-        window.gameInstance.sounds.play('click');
-    });
-    
-    // Daily challenge button
-    document.getElementById('daily-challenge-btn').addEventListener('click', function() {
-        window.gameInstance.startDailyChallenge();
-        window.gameInstance.sounds.play('click');
-    });
-    
-    // Settings button
-    document.getElementById('settings-btn').addEventListener('click', function() {
-        document.getElementById('settingsModal').style.display = 'block';
-        window.gameInstance.sounds.play('click');
-    });
-    
-    // Stats button
-    document.getElementById('stats-btn').addEventListener('click', function() {
-        document.getElementById('statsModal').style.display = 'block';
-        window.gameInstance.sounds.play('click');
-        
-        // Refresh statistics
-        window.gameInstance.statistics.updateDisplay();
-    });
-    
-    // Settings controls
-    document.getElementById('sound-toggle').addEventListener('change', function() {
-        window.gameInstance.settings.soundEnabled = this.checked;
-        window.gameInstance.saveSettings();
-        
-        if (this.checked) {
-            window.gameInstance.sounds.play('click');
+    /**
+     * Clear the SVG
+     */
+    clear() {
+        if (!this.svg) {
+            console.error('SVG element not found in clear method');
+            return;
         }
-    });
-    
-    document.getElementById('dark-mode-toggle').addEventListener('change', function() {
-        window.gameInstance.settings.darkMode = this.checked;
-        window.gameInstance.saveSettings();
-        window.gameInstance.applyDarkMode();
-        window.gameInstance.sounds.play('click');
-    });
-    
-    // Reset stats button
-    document.getElementById('reset-stats-btn').addEventListener('click', function() {
-        if (confirm('Դուք իսկապէ՞ս ցանկանում էք ջնջել բոլոր վիճակագրութիւնը:')) {
-            window.gameInstance.statistics.resetStats();
-            window.gameInstance.sounds.play('click');
-            alert('Վիճակագրութիւնը ջնջուեց:');
+        
+        while (this.svg.firstChild) {
+            this.svg.removeChild(this.svg.firstChild);
         }
-    });
+        
+        this.currentPart = 0;
+        console.log('SVG cleared');
+    }
+    
+    /**
+     * Draw the gallows
+     */
+    drawGallows() {
+        if (!this.svg) {
+            console.error('SVG element not found in drawGallows method');
+            return;
+        }
+        
+        // Base
+        this.createLine(20, 280, 180, 280);
+        
+        // Post
+        this.createLine(60, 280, 60, 50);
+        
+        // Top
+        this.createLine(60, 50, 160, 50);
+        
+        // Rope
+        this.createLine(160, 50, 160, 80);
+        
+        console.log('Gallows drawn');
+    }
+    
+    /**
+     * Draw the next part of the hangman
+     */
+    drawNextPart() {
+        if (!this.svg) {
+            console.error('SVG element not found in drawNextPart method');
+            return;
+        }
+        
+        this.currentPart++;
+        
+        switch (this.currentPart) {
+            case 1: // Head
+                this.createCircle(160, 100, 20);
+                break;
+            case 2: // Body
+                this.createLine(160, 120, 160, 190);
+                break;
+            case 3: // Left arm
+                this.createLine(160, 140, 120, 160);
+                break;
+            case 4: // Right arm
+                this.createLine(160, 140, 200, 160);
+                break;
+            case 5: // Left leg
+                this.createLine(160, 190, 130, 240);
+                break;
+            case 6: // Right leg
+                this.createLine(160, 190, 190, 240);
+                break;
+            default:
+                console.log('All parts already drawn');
+                break;
+        }
+    }
+    
+    /**
+     * Helper method to create a line
+     */
+    createLine(x1, y1, x2, y2) {
+        if (!this.svg) {
+            console.error('SVG element not found in createLine method');
+            return;
+        }
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', this.strokeColor);
+        line.setAttribute('stroke-width', this.strokeWidth);
+        line.setAttribute('stroke-linecap', 'round');
+        this.svg.appendChild(line);
+    }
+    
+    /**
+     * Helper method to create a circle
+     */
+    createCircle(cx, cy, r) {
+        if (!this.svg) {
+            console.error('SVG element not found in createCircle method');
+            return;
+        }
+        
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', cx);
+        circle.setAttribute('cy', cy);
+        circle.setAttribute('r', r);
+        circle.setAttribute('stroke', this.strokeColor);
+        circle.setAttribute('stroke-width', this.strokeWidth);
+        circle.setAttribute('fill', 'none');
+        this.svg.appendChild(circle);
+    }
 }
